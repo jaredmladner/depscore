@@ -1,0 +1,62 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:test-fixture-001",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-01-01T00:00:00Z",
+    "component": { "type": "application", "name": "sample-app", "version": "1.0.0" }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "requests",
+      "version": "2.31.0",
+      "purl": "pkg:pypi/requests@2.31.0",
+      "externalReferences": [
+        { "type": "vcs", "url": "https://github.com/psf/requests" }
+      ],
+      "licenses": [{ "license": { "id": "Apache-2.0" } }]
+    },
+    {
+      "type": "library",
+      "name": "flask",
+      "version": "3.0.0",
+      "purl": "pkg:pypi/flask@3.0.0",
+      "externalReferences": [
+        { "type": "vcs", "url": "https://github.com/pallets/flask" }
+      ],
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }]
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21",
+      "externalReferences": [
+        { "type": "vcs", "url": "https://github.com/lodash/lodash" }
+      ],
+      "licenses": [{ "license": { "id": "MIT" } }]
+    },
+    {
+      "type": "library",
+      "name": "org.springframework:spring-core",
+      "version": "6.1.0",
+      "purl": "pkg:maven/org.springframework/spring-core@6.1.0",
+      "externalReferences": [
+        { "type": "vcs", "url": "https://github.com/spring-projects/spring-framework" }
+      ],
+      "licenses": [{ "license": { "id": "Apache-2.0" } }]
+    },
+    {
+      "type": "library",
+      "name": "Newtonsoft.Json",
+      "version": "13.0.3",
+      "purl": "pkg:nuget/Newtonsoft.Json@13.0.3",
+      "externalReferences": [
+        { "type": "vcs", "url": "https://github.com/JamesNK/Newtonsoft.Json" }
+      ],
+      "licenses": [{ "license": { "id": "MIT" } }]
+    }
+  ]
+}
