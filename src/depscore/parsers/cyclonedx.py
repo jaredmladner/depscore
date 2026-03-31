@@ -4,7 +4,7 @@ from typing import Any
 
 from depscore.exceptions import SBOMParseError
 from depscore.models.sbom import ParsedSBOM, SBOMComponent
-from depscore.parsers.base import SBOMParser, ecosystem_from_purl
+from depscore.parsers.base import SBOMParser
 
 
 class CycloneDXParser(SBOMParser):
