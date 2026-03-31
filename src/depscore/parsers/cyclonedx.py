@@ -29,7 +29,6 @@ class CycloneDXParser(SBOMParser):
                 continue
             version = comp.get("version")
             purl = comp.get("purl")
-            ecosystem = ecosystem_from_purl(purl)
 
             # Try to get repo URL from externalRefs
             repo_url: str | None = None

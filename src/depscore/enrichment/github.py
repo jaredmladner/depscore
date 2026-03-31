@@ -73,7 +73,6 @@ class GitHubEnricher(BaseEnricher):
         # Parse repo data
         stars = forks = open_issues = None
         default_branch = None
-        branch_protection = None
         org_name = None
         corporate_backed = None
         days_since_last_commit = None
