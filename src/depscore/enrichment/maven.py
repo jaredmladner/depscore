@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 import httpx
 
 from depscore.enrichment.base import BaseEnricher
-from depscore.exceptions import NotFoundError
 from depscore.models.enrichment import RegistryData
 from depscore.models.sbom import SBOMComponent
 

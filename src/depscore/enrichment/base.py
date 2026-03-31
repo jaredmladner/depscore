@@ -1,6 +1,6 @@
 import asyncio
 import random
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, TypeVar
 
 import httpx

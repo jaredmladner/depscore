@@ -103,7 +103,7 @@ async def _run_scan(
         )
         progress.update(score_task, completed=len(enriched_deps))
 
-    console.print(f"[green]✓[/green] Scoring complete\n")
+    console.print("[green]✓[/green] Scoring complete\n")
 
     # --- Phase 3: Output ---
     report_config = ReportConfig(
@@ -121,7 +121,7 @@ async def _run_scan(
         console.print(f"[green]✓[/green] HTML report: [cyan]{html_path}[/cyan]")
 
     # --- Summary table ---
-    table = Table(title=f"\nSBOM Score Summary", show_header=True, header_style="bold cyan")
+    table = Table(title="\nSBOM Score Summary", show_header=True, header_style="bold cyan")
     table.add_column("Metric", style="dim", width=28)
     table.add_column("Value", justify="right")
 

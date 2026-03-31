@@ -3,7 +3,7 @@
 import pytest
 
 from depscore.models.dependency import EnrichedDependency
-from depscore.models.enrichment import GitHubData, LibrariesIOData, OSVData, RegistryData, ScorecardData
+from depscore.models.enrichment import GitHubData, LibrariesIOData, OSVData, RegistryData
 from depscore.models.sbom import SBOMComponent
 from depscore.scoring import rules as rules_mod
 from depscore.scoring.weights import score_to_grade

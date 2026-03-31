@@ -8,7 +8,6 @@ from depscore.models.scores import DependencyScores, DimensionScore, SBOMScoreRe
 from depscore.scoring import rules as rules_mod
 from depscore.scoring.ai import AIScorer
 from depscore.scoring.weights import (
-    DEFAULT_BLEND_WEIGHTS,
     DEFAULT_DIMENSION_WEIGHTS,
     score_to_grade,
 )
