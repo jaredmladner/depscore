@@ -102,6 +102,7 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: depscore:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
