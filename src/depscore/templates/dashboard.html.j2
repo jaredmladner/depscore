@@ -4,90 +4,508 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>depscore – SBOM Dependency Score Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg: #0f172a; --surface: #1e293b; --surface2: #293548;
-      --border: #334155; --text: #e2e8f0; --muted: #94a3b8;
-      --green: #22c55e; --lime: #84cc16; --yellow: #eab308;
-      --orange: #f97316; --red: #ef4444; --blue: #3b82f6;
-      --accent: #6366f1;
+      --bg:       #080e1a;
+      --surface:  #111827;
+      --surface2: #1a2335;
+      --surface3: #1e2d45;
+      --border:   #1f3050;
+      --border2:  #2a3f5f;
+      --text:     #e8edf5;
+      --muted:    #7a8fa8;
+      --muted2:   #4d6480;
+
+      --green:    #22c55e;
+      --lime:     #84cc16;
+      --yellow:   #f59e0b;
+      --orange:   #f97316;
+      --red:      #ef4444;
+      --blue:     #3b82f6;
+      --indigo:   #6366f1;
+      --violet:   #818cf8;
+
+      --accent:        #6366f1;
+      --accent-light:  #818cf8;
+      --accent-glow:   rgba(99,102,241,0.25);
+
+      --radius:   10px;
+      --radius-lg: 16px;
     }
-    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 14px; }
-    a { color: var(--accent); text-decoration: none; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
     a:hover { text-decoration: underline; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 
-    /* Layout */
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
-    header h1 { font-size: 20px; font-weight: 700; }
-    header .meta { color: var(--muted); font-size: 12px; }
-    main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted2); }
 
-    /* Cards */
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-    .card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 8px; }
-    .card .value { font-size: 36px; font-weight: 800; }
-    .card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-    /* Charts row */
-    .charts { display: grid; grid-template-columns: 240px 1fr 320px; gap: 16px; margin-bottom: 24px; }
-    .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
-    .chart-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 16px; }
-    canvas { max-height: 220px; }
-
-    /* Grade badge */
-    .grade { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 13px; color: #fff; }
-    .grade-A { background: var(--green); }
-    .grade-B { background: var(--lime); color: #111; }
-    .grade-C { background: var(--yellow); color: #111; }
-    .grade-D { background: var(--orange); }
-    .grade-F { background: var(--red); }
-
-    /* Score bar */
-    .score-bar { display: flex; align-items: center; gap: 8px; }
-    .score-bar .bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-    .score-bar .fill { height: 100%; border-radius: 3px; }
-    .score-bar .num { width: 36px; text-align: right; font-size: 12px; font-weight: 600; }
-
-    /* Table */
-    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .table-controls { padding: 12px 16px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    .table-controls input, .table-controls select {
-      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-      border-radius: 6px; padding: 6px 10px; font-size: 13px;
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0d1629 0%, #111827 60%, #0f1e38 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
     }
+    .header-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .brand-icon { width: 36px; height: 36px; flex-shrink: 0; }
+    .brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+    .brand-name {
+      font-size: 18px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a5b4fc, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    .brand-tagline { font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+
+    .header-center {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex: 1;
+      justify-content: center;
+    }
+    .header-stat {
+      text-align: center;
+    }
+    .header-stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .header-stat .val { font-size: 15px; font-weight: 700; color: var(--text); }
+
+    .header-score {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .big-score { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+    .header-meta { font-size: 11px; color: var(--muted); margin-top: 2px; text-align: right; }
+
+    /* ── Main ── */
+    main { max-width: 1440px; margin: 0 auto; padding: 28px 32px 60px; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding-left: 2px;
+    }
+
+    /* ── Summary cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--accent));
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .card:hover {
+      border-color: var(--border2);
+      box-shadow: 0 0 0 1px var(--border2), 0 4px 24px rgba(0,0,0,0.3);
+    }
+    .card h3 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .card .value {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .card .sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Charts row ── */
+    .charts {
+      display: grid;
+      grid-template-columns: 260px 1fr 300px;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .chart-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+    }
+    .chart-box h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 18px;
+    }
+    canvas { max-height: 230px; }
+
+    /* ── Grade badge ── */
+    .grade {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 11px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+    }
+    .grade-A { background: #16a34a; box-shadow: 0 0 10px rgba(34,197,94,0.35); }
+    .grade-B { background: #65a30d; color: #fff; }
+    .grade-C { background: #b45309; }
+    .grade-D { background: #c2410c; }
+    .grade-F { background: #b91c1c; box-shadow: 0 0 10px rgba(239,68,68,0.3); }
+
+    /* ── Score bar ── */
+    .score-bar { display: flex; align-items: center; gap: 8px; }
+    .score-bar .bar {
+      flex: 1;
+      height: 5px;
+      background: var(--surface3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .score-bar .fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    .score-bar .num {
+      width: 32px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .table-controls {
+      padding: 14px 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      background: var(--surface2);
+    }
+    .table-controls input,
+    .table-controls select {
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .table-controls input:focus,
+    .table-controls select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .table-controls input { min-width: 220px; }
+
     table { width: 100%; border-collapse: collapse; }
-    thead th { background: var(--surface2); padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
+    thead th {
+      background: var(--surface2);
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.15s;
+    }
     thead th:hover { color: var(--text); }
-    tbody tr { border-top: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+    thead th.sorted { color: var(--accent-light); }
+
+    tbody tr {
+      border-top: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
     tbody tr:hover { background: var(--surface2); }
-    td { padding: 10px 12px; vertical-align: middle; }
-    .pkg-name { font-weight: 600; }
-    .pkg-version { color: var(--muted); font-size: 12px; }
-    .ecosystem-badge { display: inline-block; padding: 1px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; color: var(--muted); }
+    td { padding: 11px 14px; vertical-align: middle; }
 
-    /* Detail panel */
-    .detail-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; }
+    .pkg-name { font-weight: 600; font-size: 13px; }
+    .pkg-version { color: var(--muted); font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+
+    .ecosystem-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: 5px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .cve-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .cve-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 6px rgba(239,68,68,0.6);
+    }
+
+    /* ── Detail panel ── */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+    }
     .detail-overlay.open { display: flex; align-items: flex-start; justify-content: flex-end; }
-    .detail-panel { background: var(--surface); width: min(640px, 100vw); height: 100vh; overflow-y: auto; padding: 24px; border-left: 1px solid var(--border); }
-    .detail-panel h2 { font-size: 18px; margin-bottom: 4px; }
-    .detail-panel .close-btn { float: right; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
-    .dim-section { margin-top: 20px; }
-    .dim-section h4 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-    .dim-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-    .dim-label { width: 130px; font-size: 13px; }
-    .reasoning { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-    .signals-table { width: 100%; font-size: 12px; margin-top: 8px; }
-    .signals-table td { padding: 3px 6px; border-top: 1px solid var(--border); }
-    .signals-table td:first-child { color: var(--muted); width: 55%; }
-    .cve-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .cve-chip { background: var(--surface2); border: 1px solid var(--red); color: var(--red); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
 
-    /* Responsive */
-    @media (max-width: 900px) {
+    .detail-panel {
+      background: var(--surface);
+      width: min(660px, 100vw);
+      height: 100vh;
+      overflow-y: auto;
+      border-left: 1px solid var(--border2);
+      display: flex;
+      flex-direction: column;
+      animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    .detail-header {
+      padding: 24px 24px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .detail-header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .detail-panel h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .detail-purl { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 3px; }
+    .close-btn {
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .close-btn:hover { background: var(--border2); color: var(--text); }
+
+    .detail-score-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .detail-big-score {
+      font-size: 44px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .detail-body { padding: 20px 24px; flex: 1; }
+
+    .dim-section { margin-bottom: 24px; }
+    .dim-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dim-row { margin-bottom: 14px; }
+    .dim-row-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+    .dim-label { width: 140px; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+    .dim-conf { font-size: 10px; color: var(--muted2); margin-left: auto; flex-shrink: 0; }
+    .reasoning {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      padding-left: 6px;
+      border-left: 2px solid var(--border2);
+    }
+
+    .signals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 12px;
+    }
+    .signal-cell {
+      background: var(--surface2);
+      padding: 7px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .signal-cell .sig-key { color: var(--muted); }
+    .signal-cell .sig-val { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+    .cve-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .cve-chip {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #fca5a5;
+      padding: 3px 9px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .ai-unavail {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(249,115,22,0.08);
+      border: 1px solid rgba(249,115,22,0.25);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--orange);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+    footer svg { opacity: 0.5; }
+
+    /* ── Row count chip ── */
+    .row-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .charts { grid-template-columns: 1fr 1fr; }
+      .chart-box:last-child { grid-column: span 2; }
+    }
+    @media (max-width: 700px) {
+      main { padding: 16px; }
+      header { padding: 0 16px; }
       .charts { grid-template-columns: 1fr; }
+      .chart-box:last-child { grid-column: auto; }
+      .header-center { display: none; }
     }
   </style>
 </head>
@@ -95,37 +513,94 @@
 
 <script>window.__DEPSCORE__ = {{ report_json | safe }};</script>
 
+<!-- ── Header ── -->
 <header>
-  <div>
-    <h1>depscore</h1>
-    <div class="meta">Generated {{ report.generated_at.strftime('%Y-%m-%d %H:%M UTC') }} · v{{ report.depscore_version }}</div>
-  </div>
-  <div style="text-align:right">
-    <div style="font-size:12px;color:var(--muted)">Overall SBOM Score</div>
-    <div style="font-size:28px;font-weight:800;">{{ "%.1f"|format(report.overall_sbom_score) }}
-      <span class="grade grade-{{ report.overall_sbom_grade }}">{{ report.overall_sbom_grade }}</span>
+  <div class="header-inner">
+
+    <!-- Brand -->
+    <div class="brand">
+      <!-- Icon inline SVG -->
+      <svg class="brand-icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hsg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#818cf8"/>
+            <stop offset="100%" stop-color="#4338ca"/>
+          </linearGradient>
+          <linearGradient id="hshine" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="white" stop-opacity="0.18"/>
+            <stop offset="100%" stop-color="white" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <rect width="200" height="200" rx="38" fill="#0f172a"/>
+        <rect x="1" y="1" width="198" height="198" rx="37" fill="none" stroke="white" stroke-opacity="0.06" stroke-width="1.5"/>
+        <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#hsg)"/>
+        <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#hshine)"/>
+        <rect x="52" y="126" width="24" height="30" rx="5" fill="white" opacity="0.45"/>
+        <rect x="88"  y="104" width="24" height="52" rx="5" fill="white" opacity="0.70"/>
+        <rect x="124" y="78"  width="24" height="78" rx="5" fill="white" opacity="0.95"/>
+        <rect x="48" y="158" width="104" height="3" rx="1.5" fill="white" opacity="0.25"/>
+        <circle cx="148" cy="52" r="14" fill="#22c55e"/>
+        <text x="148" y="57" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="800" fill="white">A</text>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">depscore</span>
+        <span class="brand-tagline">SBOM Dependency Intelligence</span>
+      </div>
     </div>
+
+    <!-- Center stats -->
+    <div class="header-center">
+      <div class="header-stat">
+        <div class="label">Dependencies</div>
+        <div class="val">{{ report.total_dependencies }}</div>
+      </div>
+      <div style="width:1px;height:28px;background:var(--border)"></div>
+      {% for dim, avg in report.dimension_averages.items() %}
+      <div class="header-stat">
+        <div class="label">{{ dim.replace('_',' ').title() }}</div>
+        <div class="val">{{ "%.0f"|format(avg) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Overall score -->
+    <div class="header-score">
+      <div>
+        <div class="big-score">{{ "%.1f"|format(report.overall_sbom_score) }}
+          <span class="grade grade-{{ report.overall_sbom_grade }}">{{ report.overall_sbom_grade }}</span>
+        </div>
+        <div class="header-meta">
+          Generated {{ report.generated_at.strftime('%Y-%m-%d %H:%M UTC') }} · v{{ report.depscore_version }}
+        </div>
+      </div>
+    </div>
+
   </div>
 </header>
 
+<!-- ── Main ── -->
 <main>
+
   <!-- Summary cards -->
+  <p class="section-title">Overview</p>
   <div class="cards">
-    <div class="card">
-      <h3>Dependencies</h3>
+    <div class="card" style="--card-accent: var(--accent)">
+      <h3>Total Dependencies</h3>
       <div class="value">{{ report.total_dependencies }}</div>
-      <div class="sub">scanned in this SBOM</div>
+      <div class="sub">packages in this SBOM</div>
     </div>
+    {% set grade_colors = {'A':'#22c55e','B':'#84cc16','C':'#f59e0b','D':'#f97316','F':'#ef4444'} %}
     {% for grade, color in grade_colors.items() %}
-    <div class="card" style="border-top: 3px solid {{ color }}">
+    <div class="card" style="--card-accent: {{ color }}">
       <h3>Grade {{ grade }}</h3>
       <div class="value" style="color:{{ color }}">{{ report.grade_distribution.get(grade, 0) }}</div>
-      <div class="sub">{{ "%.0f"|format((report.grade_distribution.get(grade, 0) / report.total_dependencies * 100) if report.total_dependencies else 0) }}% of dependencies</div>
+      <div class="sub">{{ "%.0f"|format((report.grade_distribution.get(grade,0)/report.total_dependencies*100) if report.total_dependencies else 0) }}% of dependencies</div>
     </div>
     {% endfor %}
   </div>
 
   <!-- Charts -->
+  <p class="section-title">Analysis</p>
   <div class="charts">
     <div class="chart-box">
       <h3>Grade Distribution</h3>
@@ -142,76 +617,130 @@
   </div>
 
   <!-- Dependency table -->
+  <p class="section-title">Dependencies</p>
   <div class="table-wrap">
     <div class="table-controls">
-      <input type="text" id="searchInput" placeholder="Search dependencies…" style="width:220px" />
+      <input type="text" id="searchInput" placeholder="🔍  Search packages…" />
       <select id="ecoFilter"><option value="">All ecosystems</option></select>
-      <select id="gradeFilter"><option value="">All grades</option>
+      <select id="gradeFilter">
+        <option value="">All grades</option>
         {% for g in ['A','B','C','D','F'] %}<option value="{{ g }}">Grade {{ g }}</option>{% endfor %}
       </select>
-      <span id="rowCount" style="color:var(--muted);font-size:12px;margin-left:auto"></span>
+      <span class="row-count" id="rowCount"></span>
     </div>
     <table id="depsTable">
       <thead>
         <tr>
-          <th data-col="dependency_name">Package ↕</th>
-          <th data-col="ecosystem">Ecosystem ↕</th>
-          <th data-col="overall" style="width:90px">Score ↕</th>
-          <th data-col="maturity_score" style="width:110px">Maturity</th>
-          <th data-col="maintainability_score" style="width:110px">Maintain.</th>
-          <th data-col="security_score" style="width:110px">Security</th>
-          <th data-col="community_score" style="width:110px">Community</th>
-          <th data-col="overall_grade" style="width:70px">Grade ↕</th>
-          <th data-col="cve_count" style="width:60px">CVEs</th>
+          <th data-col="dependency_name">Package</th>
+          <th data-col="ecosystem">Ecosystem</th>
+          <th data-col="overall" style="width:80px">Score</th>
+          <th data-col="maturity_score" style="width:120px">Maturity</th>
+          <th data-col="maintainability_score" style="width:120px">Maintain.</th>
+          <th data-col="security_score" style="width:120px">Security</th>
+          <th data-col="community_score" style="width:120px">Community</th>
+          <th data-col="overall_grade" style="width:72px">Grade</th>
+          <th data-col="cve_count" style="width:62px">CVEs</th>
         </tr>
       </thead>
       <tbody id="depsBody"></tbody>
     </table>
   </div>
+
 </main>
 
-<!-- Detail panel -->
+<!-- ── Footer ── -->
+<footer>
+  <svg width="16" height="16" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4338ca"/>
+      </linearGradient>
+    </defs>
+    <rect width="200" height="200" rx="38" fill="#0f172a"/>
+    <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#fg)"/>
+    <rect x="52" y="126" width="24" height="30" rx="5" fill="white" opacity="0.45"/>
+    <rect x="88"  y="104" width="24" height="52" rx="5" fill="white" opacity="0.70"/>
+    <rect x="124" y="78"  width="24" height="78" rx="5" fill="white" opacity="0.95"/>
+  </svg>
+  <span>Generated by <strong>depscore</strong> v{{ report.depscore_version }} · {{ report.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+</footer>
+
+<!-- ── Detail panel ── -->
 <div class="detail-overlay" id="detailOverlay">
   <div class="detail-panel" id="detailPanel">
-    <button class="close-btn" onclick="closeDetail()">✕</button>
-    <div id="detailContent"></div>
+    <div class="detail-header">
+      <div class="detail-header-top">
+        <div>
+          <h2 id="detailTitle"></h2>
+          <div class="detail-purl" id="detailPurl"></div>
+        </div>
+        <button class="close-btn" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-score-row">
+        <div class="detail-big-score" id="detailScore"></div>
+        <div id="detailGrade"></div>
+        <div style="margin-left:auto;text-align:right">
+          <div id="detailEco"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px" id="detailVersion"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-body" id="detailContent"></div>
   </div>
 </div>
 
 <script>
-const DATA = window.__DEPSCORE__;
+const DATA   = window.__DEPSCORE__;
 const scores = DATA.scores;
 
-// --- Populate ecosystem filter ---
+// ── Ecosystem filter ──
 const ecosystems = [...new Set(scores.map(s => s.ecosystem).filter(Boolean))].sort();
-const ecoFilter = document.getElementById('ecoFilter');
+const ecoFilter  = document.getElementById('ecoFilter');
 ecosystems.forEach(e => {
-  const opt = document.createElement('option');
-  opt.value = e; opt.textContent = e;
-  ecoFilter.appendChild(opt);
+  const o = document.createElement('option');
+  o.value = e; o.textContent = e;
+  ecoFilter.appendChild(o);
 });
 
-// --- Charts ---
-const GRADE_COLORS = { A: '#22c55e', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#ef4444' };
-const DIM_COLORS = ['#6366f1','#3b82f6','#22c55e','#f97316'];
+// ── Colour helpers ──
+const GRADE_COLORS = { A:'#22c55e', B:'#84cc16', C:'#f59e0b', D:'#f97316', F:'#ef4444' };
+function dimColor(s) {
+  if (s >= 80) return '#22c55e';
+  if (s >= 65) return '#84cc16';
+  if (s >= 50) return '#f59e0b';
+  if (s >= 35) return '#f97316';
+  return '#ef4444';
+}
 
-// Grade donut
+// ── Charts ──
+const chartDefaults = {
+  plugins: { legend: { labels: { color: '#7a8fa8', font: { family: 'Inter', size: 11 } } } }
+};
+
+// Grade doughnut
 new Chart(document.getElementById('gradeChart'), {
   type: 'doughnut',
   data: {
     labels: Object.keys(DATA.grade_distribution),
     datasets: [{
       data: Object.values(DATA.grade_distribution),
-      backgroundColor: Object.keys(DATA.grade_distribution).map(g => GRADE_COLORS[g] || '#94a3b8'),
-      borderWidth: 2, borderColor: '#1e293b'
+      backgroundColor: Object.keys(DATA.grade_distribution).map(g => GRADE_COLORS[g] || '#4d6480'),
+      borderWidth: 2,
+      borderColor: '#111827',
+      hoverOffset: 4
     }]
   },
-  options: { plugins: { legend: { labels: { color: '#e2e8f0', font: { size: 12 } } } }, cutout: '60%' }
+  options: {
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#7a8fa8', font: { family: 'Inter', size: 11 }, padding: 12, boxWidth: 10 } }
+    }
+  }
 });
 
 // Radar
-const dimLabels = ['Maturity', 'Maintainability', 'Security', 'Community'];
-const dimKeys = ['maturity', 'maintainability', 'security_posture', 'community_health'];
+const dimLabels = ['Maturity','Maintainability','Security','Community'];
+const dimKeys   = ['maturity','maintainability','security_posture','community_health'];
 new Chart(document.getElementById('radarChart'), {
   type: 'radar',
   data: {
@@ -219,98 +748,135 @@ new Chart(document.getElementById('radarChart'), {
     datasets: [{
       label: 'Average',
       data: dimKeys.map(k => DATA.dimension_averages[k] || 0),
-      backgroundColor: 'rgba(99,102,241,0.2)',
+      backgroundColor: 'rgba(99,102,241,0.15)',
       borderColor: '#6366f1',
-      pointBackgroundColor: '#6366f1'
+      borderWidth: 2,
+      pointBackgroundColor: '#6366f1',
+      pointBorderColor: '#818cf8',
+      pointRadius: 4
     }]
   },
   options: {
-    scales: { r: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 20 }, pointLabels: { color: '#e2e8f0', font: { size: 11 } } } },
+    scales: {
+      r: {
+        min: 0, max: 100,
+        grid: { color: '#1f3050' },
+        ticks: { color: '#4d6480', stepSize: 25, backdropColor: 'transparent', font: { size: 10 } },
+        pointLabels: { color: '#7a8fa8', font: { family: 'Inter', size: 11 } }
+      }
+    },
     plugins: { legend: { display: false } }
   }
 });
 
 // Histogram
 const buckets = Array(10).fill(0);
-scores.forEach(s => { const b = Math.min(9, Math.floor(s.overall / 10)); buckets[b]++; });
+scores.forEach(s => { buckets[Math.min(9, Math.floor(s.overall / 10))]++; });
+const histColors = ['#b91c1c','#b91c1c','#b91c1c','#c2410c','#b45309','#b45309','#65a30d','#65a30d','#16a34a','#16a34a'];
 new Chart(document.getElementById('histChart'), {
   type: 'bar',
   data: {
-    labels: ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','70-79','80-89','90-100'],
-    datasets: [{ data: buckets, backgroundColor: '#6366f1', borderRadius: 4 }]
+    labels: ['0–9','10–19','20–29','30–39','40–49','50–59','60–69','70–79','80–89','90–100'],
+    datasets: [{
+      data: buckets,
+      backgroundColor: histColors,
+      borderRadius: 5,
+      borderSkipped: false
+    }]
   },
-  options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#334155' } }, y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } } } }
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#4d6480', font: { size: 10 } }, grid: { color: '#1f3050' } },
+      y: { ticks: { color: '#4d6480', font: { size: 11 } }, grid: { color: '#1f3050' } }
+    }
+  }
 });
 
-// --- Table rendering ---
+// ── Score bar HTML ──
 function scoreBar(score, color) {
   return `<div class="score-bar">
     <div class="bar"><div class="fill" style="width:${score}%;background:${color}"></div></div>
-    <div class="num">${score.toFixed(0)}</div>
+    <div class="num" style="color:${color}">${score.toFixed(0)}</div>
   </div>`;
 }
 
-function dimColor(score) {
-  if (score >= 80) return '#22c55e';
-  if (score >= 65) return '#84cc16';
-  if (score >= 50) return '#eab308';
-  if (score >= 35) return '#f97316';
-  return '#ef4444';
-}
-
+// ── Table ──
 let sortCol = 'overall', sortDir = -1;
-let filtered = [...scores];
 
 function renderTable() {
   const search = document.getElementById('searchInput').value.toLowerCase();
-  const eco = ecoFilter.value;
-  const grade = document.getElementById('gradeFilter').value;
+  const eco    = ecoFilter.value;
+  const grade  = document.getElementById('gradeFilter').value;
 
-  filtered = scores.filter(s => {
+  let filtered = scores.filter(s => {
     if (search && !s.dependency_name.toLowerCase().includes(search)) return false;
-    if (eco && s.ecosystem !== eco) return false;
-    if (grade && s.overall_grade !== grade) return false;
+    if (eco   && s.ecosystem !== eco)                                 return false;
+    if (grade && s.overall_grade !== grade)                           return false;
     return true;
   });
 
   filtered.sort((a, b) => {
     let av = a[sortCol] ?? 0, bv = b[sortCol] ?? 0;
-    if (sortCol === 'maturity_score') { av = a.maturity.score; bv = b.maturity.score; }
-    if (sortCol === 'maintainability_score') { av = a.maintainability.score; bv = b.maintainability.score; }
-    if (sortCol === 'security_score') { av = a.security_posture.score; bv = b.security_posture.score; }
-    if (sortCol === 'community_score') { av = a.community_health.score; bv = b.community_health.score; }
-    if (sortCol === 'cve_count') { av = a.security_posture?.signals?.vuln_count_total ?? 0; bv = b.security_posture?.signals?.vuln_count_total ?? 0; }
-    if (typeof av === 'string') return sortDir * av.localeCompare(bv);
-    return sortDir * (av - bv);
+    const map = {
+      maturity_score:        s => s.maturity.score,
+      maintainability_score: s => s.maintainability.score,
+      security_score:        s => s.security_posture.score,
+      community_score:       s => s.community_health.score,
+      cve_count:             s => s.security_posture?.signals?.vuln_count_total ?? 0,
+    };
+    if (map[sortCol]) { av = map[sortCol](a); bv = map[sortCol](b); }
+    return typeof av === 'string' ? sortDir * av.localeCompare(bv) : sortDir * (av - bv);
   });
 
-  const tbody = document.getElementById('depsBody');
-  tbody.innerHTML = filtered.map((s, i) => {
-    const cveCount = (s.osv_vuln_total ?? 0);
+  // Update sort indicators
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === sortCol);
+    th.textContent = th.dataset.col === sortCol
+      ? th.dataset.col.replace(/_score$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) + (sortDir === -1 ? ' ↓' : ' ↑')
+      : th.dataset.col.replace(/_score$/,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  });
+  // Restore short labels
+  const labelMap = { dependency_name:'Package', ecosystem:'Ecosystem', overall:'Score', overall_grade:'Grade', cve_count:'CVEs' };
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    const col = th.dataset.col;
+    if (labelMap[col]) {
+      const arrow = col === sortCol ? (sortDir === -1 ? ' ↓' : ' ↑') : '';
+      th.textContent = labelMap[col] + arrow;
+    }
+  });
+
+  document.getElementById('depsBody').innerHTML = filtered.map(s => {
+    const cveCount = s.osv_vuln_total ?? 0;
     return `<tr onclick="showDetail(${scores.indexOf(s)})">
-      <td><div class="pkg-name">${s.dependency_name}</div><div class="pkg-version">${s.version || ''}</div></td>
-      <td><span class="ecosystem-badge">${s.ecosystem || '?'}</span></td>
-      <td><strong>${s.overall.toFixed(1)}</strong></td>
-      <td>${scoreBar(s.maturity.score, dimColor(s.maturity.score))}</td>
+      <td>
+        <div class="pkg-name">${s.dependency_name}</div>
+        <div class="pkg-version">${s.version || ''}</div>
+      </td>
+      <td><span class="ecosystem-badge">${s.ecosystem || '—'}</span></td>
+      <td><strong style="font-size:14px;letter-spacing:-0.01em">${s.overall.toFixed(1)}</strong></td>
+      <td>${scoreBar(s.maturity.score,        dimColor(s.maturity.score))}</td>
       <td>${scoreBar(s.maintainability.score, dimColor(s.maintainability.score))}</td>
-      <td>${scoreBar(s.security_posture.score, dimColor(s.security_posture.score))}</td>
-      <td>${scoreBar(s.community_health.score, dimColor(s.community_health.score))}</td>
+      <td>${scoreBar(s.security_posture.score,dimColor(s.security_posture.score))}</td>
+      <td>${scoreBar(s.community_health.score,dimColor(s.community_health.score))}</td>
       <td><span class="grade grade-${s.overall_grade}">${s.overall_grade}</span></td>
-      <td style="color:${cveCount > 0 ? 'var(--red)' : 'var(--muted)'}">${cveCount || 0}</td>
+      <td>${cveCount > 0
+        ? `<span class="cve-badge"><span class="cve-dot"></span>${cveCount}</span>`
+        : `<span style="color:var(--muted2)">0</span>`
+      }</td>
     </tr>`;
   }).join('');
 
-  document.getElementById('rowCount').textContent = `${filtered.length} / ${scores.length} packages`;
+  document.getElementById('rowCount').textContent = `${filtered.length} / ${scores.length}`;
 }
 
-// Sort on header click
-document.querySelectorAll('thead th[data-col]').forEach(th => {
+document.querySelectorAll('thead th[data-col]').forEach(th =>
   th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = -1; }
+    sortDir = sortCol === th.dataset.col ? sortDir * -1 : -1;
+    sortCol = th.dataset.col;
     renderTable();
-  });
-});
+  })
+);
 
 ['searchInput','ecoFilter','gradeFilter'].forEach(id =>
   document.getElementById(id).addEventListener('input', renderTable)
@@ -318,58 +884,75 @@ document.querySelectorAll('thead th[data-col]').forEach(th => {
 
 renderTable();
 
-// --- Detail panel ---
+// ── Detail panel ──
 function showDetail(idx) {
-  const s = scores[idx];
+  const s    = scores[idx];
   const dims = [
-    { key: 'maturity', label: 'Maturity' },
-    { key: 'maintainability', label: 'Maintainability' },
-    { key: 'security_posture', label: 'Security Posture' },
-    { key: 'community_health', label: 'Community Health' },
+    { key:'maturity',         label:'Maturity' },
+    { key:'maintainability',  label:'Maintainability' },
+    { key:'security_posture', label:'Security Posture' },
+    { key:'community_health', label:'Community Health' },
   ];
 
-  let cveHtml = '';
-  const cves = s.security_posture?.signals?.cve_ids || [];
-  if (cves.length) {
-    cveHtml = `<div class="dim-section"><h4>CVE IDs</h4><div class="cve-list">${cves.map(c => `<span class="cve-chip">${c}</span>`).join('')}</div></div>`;
-  }
+  document.getElementById('detailTitle').textContent = s.dependency_name;
+  document.getElementById('detailPurl').textContent  = s.purl || '';
+  document.getElementById('detailScore').textContent = s.overall.toFixed(1);
+  document.getElementById('detailScore').style.color = dimColor(s.overall);
+  document.getElementById('detailGrade').innerHTML   = `<span class="grade grade-${s.overall_grade}" style="font-size:16px;padding:5px 16px">${s.overall_grade}</span>`;
+  document.getElementById('detailEco').innerHTML     = `<span class="ecosystem-badge">${s.ecosystem || '—'}</span>`;
+  document.getElementById('detailVersion').textContent = s.version ? `v${s.version}` : '';
 
-  let signalsHtml = '';
+  // Dimension scores
+  const dimsHtml = dims.map(d => {
+    const dim   = s[d.key];
+    const color = dimColor(dim.score);
+    return `<div class="dim-row">
+      <div class="dim-row-top">
+        <div class="dim-label">${d.label}</div>
+        ${scoreBar(dim.score, color)}
+        <div class="dim-conf">${(dim.confidence*100).toFixed(0)}% conf</div>
+      </div>
+      <div class="reasoning">${dim.reasoning}</div>
+    </div>`;
+  }).join('');
+
+  // CVEs
+  const cves    = s.security_posture?.signals?.cve_ids || [];
+  const cveHtml = cves.length
+    ? `<div class="dim-section">
+        <div class="dim-section-title">CVE IDs (${cves.length})</div>
+        <div class="cve-list">${cves.map(c=>`<span class="cve-chip">${c}</span>`).join('')}</div>
+       </div>`
+    : '';
+
+  // Raw signals
   const allSignals = {};
   dims.forEach(d => Object.assign(allSignals, s[d.key]?.signals || {}));
   const sigEntries = Object.entries(allSignals).filter(([,v]) => v !== null && v !== undefined);
-  if (sigEntries.length) {
-    signalsHtml = `<div class="dim-section"><h4>Raw Signals</h4>
-      <table class="signals-table">${sigEntries.map(([k,v]) =>
-        `<tr><td>${k.replace(/_/g,' ')}</td><td>${typeof v === 'number' ? v.toFixed ? v.toFixed(2) : v : v}</td></tr>`
-      ).join('')}</table></div>`;
-  }
+  const signalsHtml = sigEntries.length
+    ? `<div class="dim-section">
+        <div class="dim-section-title">Raw Signals</div>
+        <div class="signals-grid">${sigEntries.map(([k,v]) =>
+          `<div class="signal-cell">
+            <span class="sig-key">${k.replace(/_/g,' ')}</span>
+            <span class="sig-val">${typeof v === 'number' && v % 1 !== 0 ? v.toFixed(2) : v}</span>
+          </div>`
+        ).join('')}</div>
+       </div>`
+    : '';
+
+  const aiWarn = s.ai_available === false
+    ? `<div class="ai-unavail">⚠ AI scoring unavailable — showing rules-based scores only.<br><small>${s.ai_error || ''}</small></div>`
+    : '';
 
   document.getElementById('detailContent').innerHTML = `
-    <h2>${s.dependency_name}</h2>
-    <div style="color:var(--muted);font-size:12px;margin-bottom:12px">${s.purl || s.ecosystem || ''} · v${s.version || 'unknown'}</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div style="font-size:40px;font-weight:800">${s.overall.toFixed(1)}</div>
-      <span class="grade grade-${s.overall_grade}" style="font-size:18px;padding:4px 14px">${s.overall_grade}</span>
-    </div>
     <div class="dim-section">
-      <h4>Scores by Dimension</h4>
-      ${dims.map(d => {
-        const dim = s[d.key];
-        const color = dimColor(dim.score);
-        return `<div style="margin-bottom:12px">
-          <div class="dim-row">
-            <div class="dim-label">${d.label}</div>
-            ${scoreBar(dim.score, color)}
-            <div style="font-size:11px;color:var(--muted)">${(dim.confidence*100).toFixed(0)}% conf.</div>
-          </div>
-          <div class="reasoning">${dim.reasoning}</div>
-        </div>`;
-      }).join('')}
+      <div class="dim-section-title">Scores by Dimension</div>
+      ${dimsHtml}
     </div>
     ${cveHtml}
     ${signalsHtml}
-    ${s.ai_available === false ? `<div style="margin-top:12px;font-size:12px;color:var(--orange)">⚠ AI scoring unavailable: ${s.ai_error || 'unknown error'}</div>` : ''}
+    ${aiWarn}
   `;
 
   document.getElementById('detailOverlay').classList.add('open');
@@ -381,6 +964,10 @@ function closeDetail() {
 
 document.getElementById('detailOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('detailOverlay')) closeDetail();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetail();
 });
 </script>
 </body>
