@@ -50,6 +50,7 @@ class Settings(BaseSettings):
             )
         except Exception as exc:
             from depscore.exceptions import ConfigurationError
+
             raise ConfigurationError(
                 f"Configuration error: {exc}\n"
                 "Ensure GITHUB_TOKEN and ANTHROPIC_API_KEY are set."

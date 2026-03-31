@@ -21,7 +21,7 @@ def _extract_owner_repo(component: SBOMComponent) -> tuple[str, str] | None:
 
     # Try PURL pkg:github/owner/repo
     if component.purl and component.purl.startswith("pkg:github/"):
-        rest = component.purl[len("pkg:github/"):].split("@")[0]
+        rest = component.purl[len("pkg:github/") :].split("@")[0]
         parts = rest.split("/")
         if len(parts) >= 2:
             return parts[0], parts[1]
@@ -40,7 +40,9 @@ class GitHubEnricher(BaseEnricher):
             "X-GitHub-Api-Version": "2022-11-28",
         }
 
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> GitHubData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> GitHubData:
         coords = _extract_owner_repo(component)
         if not coords:
             return GitHubData(error="No GitHub repo URL found")
@@ -49,20 +51,49 @@ class GitHubEnricher(BaseEnricher):
         full_name = f"{owner}/{repo}"
 
         try:
-            repo_data, community_data, contributors_data, commits_data, pr_data = await asyncio.gather(
-                self._get(client, f"{self.BASE}/repos/{full_name}", headers=self.headers),
-                self._get(client, f"{self.BASE}/repos/{full_name}/community/profile", headers=self.headers),
-                self._get(client, f"{self.BASE}/repos/{full_name}/contributors", headers=self.headers, params={"per_page": "100", "anon": "true"}),
-                self._get(client, f"{self.BASE}/repos/{full_name}/commits", headers=self.headers, params={
-                    "since": (datetime.now(timezone.utc) - timedelta(days=90)).isoformat(),
-                    "per_page": "100",
-                }),
-                self._get(client, f"{self.BASE}/repos/{full_name}/pulls", headers=self.headers, params={
-                    "state": "open",
-                    "sort": "created",
-                    "direction": "asc",
-                    "per_page": "100",
-                }),
+            (
+                repo_data,
+                community_data,
+                contributors_data,
+                commits_data,
+                pr_data,
+            ) = await asyncio.gather(
+                self._get(
+                    client, f"{self.BASE}/repos/{full_name}", headers=self.headers
+                ),
+                self._get(
+                    client,
+                    f"{self.BASE}/repos/{full_name}/community/profile",
+                    headers=self.headers,
+                ),
+                self._get(
+                    client,
+                    f"{self.BASE}/repos/{full_name}/contributors",
+                    headers=self.headers,
+                    params={"per_page": "100", "anon": "true"},
+                ),
+                self._get(
+                    client,
+                    f"{self.BASE}/repos/{full_name}/commits",
+                    headers=self.headers,
+                    params={
+                        "since": (
+                            datetime.now(timezone.utc) - timedelta(days=90)
+                        ).isoformat(),
+                        "per_page": "100",
+                    },
+                ),
+                self._get(
+                    client,
+                    f"{self.BASE}/repos/{full_name}/pulls",
+                    headers=self.headers,
+                    params={
+                        "state": "open",
+                        "sort": "created",
+                        "direction": "asc",
+                        "per_page": "100",
+                    },
+                ),
                 return_exceptions=True,
             )
         except (AuthenticationError, NotFoundError) as exc:
@@ -82,7 +113,11 @@ class GitHubEnricher(BaseEnricher):
             forks = repo_data.get("forks_count")
             open_issues = repo_data.get("open_issues_count")
             default_branch = repo_data.get("default_branch", "main")
-            org_name = repo_data.get("organization", {}).get("login") if repo_data.get("organization") else None
+            org_name = (
+                repo_data.get("organization", {}).get("login")
+                if repo_data.get("organization")
+                else None
+            )
             corporate_backed = org_name is not None
             pushed_at = repo_data.get("pushed_at")
             if pushed_at:
@@ -108,8 +143,12 @@ class GitHubEnricher(BaseEnricher):
         if isinstance(contributors_data, list):
             total_contributors = len(contributors_data)
             if total_contributors > 0:
-                total_contributions = sum(c.get("contributions", 0) for c in contributors_data)
-                top_contributions = max((c.get("contributions", 0) for c in contributors_data), default=0)
+                total_contributions = sum(
+                    c.get("contributions", 0) for c in contributors_data
+                )
+                top_contributions = max(
+                    (c.get("contributions", 0) for c in contributors_data), default=0
+                )
                 if total_contributions > 0:
                     top_contributor_percent = top_contributions / total_contributions
         elif isinstance(contributors_data, Exception):
@@ -153,7 +192,9 @@ class GitHubEnricher(BaseEnricher):
                     headers=self.headers,
                 )
                 branch_protection_enabled = True
-                signed_commits_required = bp_data.get("required_signatures", {}).get("enabled", False)
+                signed_commits_required = bp_data.get("required_signatures", {}).get(
+                    "enabled", False
+                )
             except Exception as exc:
                 errors.append(f"branch_protection: {exc}")
 

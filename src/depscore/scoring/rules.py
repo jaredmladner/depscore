@@ -8,7 +8,9 @@ reflects what fraction of expected signals were available.
 from depscore.models.dependency import EnrichedDependency
 
 
-def _weighted_avg(signal_scores: list[tuple[float | None, float]]) -> tuple[float, float]:
+def _weighted_avg(
+    signal_scores: list[tuple[float | None, float]],
+) -> tuple[float, float]:
     """Compute (score, confidence) from [(value_or_None, weight), ...].
 
     Returns (score 0-100, confidence 0-1).
@@ -23,6 +25,7 @@ def _weighted_avg(signal_scores: list[tuple[float | None, float]]) -> tuple[floa
 
 
 # ─── Maturity ────────────────────────────────────────────────────────────────
+
 
 def _version_maturity(version: str | None) -> float | None:
     if not version:
@@ -86,6 +89,7 @@ def _downloads_maturity(weekly: int | None) -> float | None:
 
 # ─── Maintainability ─────────────────────────────────────────────────────────
 
+
 def _recency_score(days: int | None) -> float | None:
     if days is None:
         return None
@@ -147,6 +151,7 @@ def _bus_factor_score(top_pct: float | None) -> float | None:
 
 # ─── Security Posture ─────────────────────────────────────────────────────────
 
+
 def _vuln_score(osv) -> float | None:
     if osv is None:
         return None
@@ -187,7 +192,12 @@ def _signed_commits_score(required: bool | None) -> float | None:
 def _scorecard_security_score(checks: dict | None) -> float | None:
     if not checks:
         return None
-    relevant = ["Vulnerabilities", "Binary-Artifacts", "Dangerous-Workflow", "Token-Permissions"]
+    relevant = [
+        "Vulnerabilities",
+        "Binary-Artifacts",
+        "Dangerous-Workflow",
+        "Token-Permissions",
+    ]
     vals = [checks[k] * 10 for k in relevant if k in checks]
     if not vals:
         return None
@@ -195,6 +205,7 @@ def _scorecard_security_score(checks: dict | None) -> float | None:
 
 
 # ─── Community Health ─────────────────────────────────────────────────────────
+
 
 def _contributor_count_score(count: int | None) -> float | None:
     if count is None:
@@ -229,6 +240,7 @@ def _scorecard_community_score(checks: dict | None) -> float | None:
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
+
 def score_maturity(dep: EnrichedDependency) -> tuple[float, float, dict]:
     registry = dep.registry
     lib = dep.libraries_io
@@ -243,7 +255,9 @@ def score_maturity(dep: EnrichedDependency) -> tuple[float, float, dict]:
         (registry.total_versions if registry else None)
         or (lib.release_count if lib else None)
     )
-    download_score = _downloads_maturity(registry.weekly_downloads if registry else None)
+    download_score = _downloads_maturity(
+        registry.weekly_downloads if registry else None
+    )
 
     signals["version_score"] = version_score
     signals["age_score"] = age_score
@@ -251,15 +265,19 @@ def score_maturity(dep: EnrichedDependency) -> tuple[float, float, dict]:
     signals["downloads_score"] = download_score
     signals["version"] = dep.component.version
     signals["first_published_days_ago"] = age_score and (
-        registry.first_published_days_ago if registry else (lib.first_publish_days_ago if lib else None)
+        registry.first_published_days_ago
+        if registry
+        else (lib.first_publish_days_ago if lib else None)
     )
 
-    score, confidence = _weighted_avg([
-        (version_score, 2.0),
-        (age_score, 2.0),
-        (release_score, 1.5),
-        (download_score, 1.0),
-    ])
+    score, confidence = _weighted_avg(
+        [
+            (version_score, 2.0),
+            (age_score, 2.0),
+            (release_score, 1.5),
+            (download_score, 1.0),
+        ]
+    )
     return score, confidence, signals
 
 
@@ -277,12 +295,14 @@ def score_maintainability(dep: EnrichedDependency) -> tuple[float, float, dict]:
     signals["open_pr_age_days_median"] = gh.open_pr_age_days_median if gh else None
     signals["top_contributor_percent"] = gh.top_contributor_percent if gh else None
 
-    score, confidence = _weighted_avg([
-        (recency, 3.0),
-        (cadence, 2.5),
-        (pr_age, 1.5),
-        (bus, 2.0),
-    ])
+    score, confidence = _weighted_avg(
+        [
+            (recency, 3.0),
+            (cadence, 2.5),
+            (pr_age, 1.5),
+            (bus, 2.0),
+        ]
+    )
     return score, confidence, signals
 
 
@@ -305,13 +325,15 @@ def score_security_posture(dep: EnrichedDependency) -> tuple[float, float, dict]
     signals["signed_commits_required"] = gh.signed_commits_required if gh else None
     signals["scorecard_aggregate"] = scorecard.aggregate_score if scorecard else None
 
-    score, confidence = _weighted_avg([
-        (vuln, 4.0),
-        (sec_md, 1.5),
-        (bp, 1.5),
-        (signed, 1.0),
-        (sc_sec, 2.0),
-    ])
+    score, confidence = _weighted_avg(
+        [
+            (vuln, 4.0),
+            (sec_md, 1.5),
+            (bp, 1.5),
+            (signed, 1.0),
+            (sc_sec, 2.0),
+        ]
+    )
     return score, confidence, signals
 
 
@@ -332,10 +354,12 @@ def score_community_health(dep: EnrichedDependency) -> tuple[float, float, dict]
     signals["org_name"] = gh.org_name if gh else None
     signals["corporate_backed"] = gh.corporate_backed if gh else None
 
-    score, confidence = _weighted_avg([
-        (contributor_count, 2.5),
-        (bus, 2.0),
-        (sourcerank, 1.5),
-        (sc_comm, 2.0),
-    ])
+    score, confidence = _weighted_avg(
+        [
+            (contributor_count, 2.5),
+            (bus, 2.0),
+            (sourcerank, 1.5),
+            (sc_comm, 2.0),
+        ]
+    )
     return score, confidence, signals

@@ -22,7 +22,13 @@ def write_html(report: SBOMScoreReport, config: ReportConfig) -> Path:
 
     report_json = json.dumps(report.model_dump(mode="json"), default=str)
 
-    grade_colors = {"A": "#22c55e", "B": "#84cc16", "C": "#eab308", "D": "#f97316", "F": "#ef4444"}
+    grade_colors = {
+        "A": "#22c55e",
+        "B": "#84cc16",
+        "C": "#eab308",
+        "D": "#f97316",
+        "F": "#ef4444",
+    }
 
     try:
         html = template.render(

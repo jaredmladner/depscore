@@ -9,14 +9,18 @@ from depscore.models.sbom import SBOMComponent
 
 
 class NpmEnricher(BaseEnricher):
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> RegistryData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> RegistryData:
         # npm scoped packages use %2F encoding in the registry URL
         name = component.name.replace("/", "%2F")
         url = f"https://registry.npmjs.org/{name}"
         try:
             data = await self._get(client, url)
         except NotFoundError:
-            return RegistryData(registry="npm", error=f"Not found on npm: {component.name}")
+            return RegistryData(
+                registry="npm", error=f"Not found on npm: {component.name}"
+            )
         except Exception as exc:
             return RegistryData(registry="npm", error=str(exc))
 
@@ -49,7 +53,10 @@ class NpmEnricher(BaseEnricher):
 
         is_prerelease: bool | None = None
         if latest_version:
-            is_prerelease = any(s in latest_version.lower() for s in ("alpha", "beta", "rc", "pre", "dev"))
+            is_prerelease = any(
+                s in latest_version.lower()
+                for s in ("alpha", "beta", "rc", "pre", "dev")
+            )
 
         # Download count from downloads API
         weekly_downloads: int | None = None

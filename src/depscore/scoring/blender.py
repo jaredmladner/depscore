@@ -74,7 +74,9 @@ async def score_dependency(
             reasoning = ai_dim.reasoning
             ai_confidence = ai_dim.confidence
         else:
-            reasoning = f"Rules-only score (AI unavailable). Key signals: {rules_signals[dim]}"
+            reasoning = (
+                f"Rules-only score (AI unavailable). Key signals: {rules_signals[dim]}"
+            )
             ai_confidence = 0.0
 
         confidence = rules_confidences[dim]
@@ -89,8 +91,7 @@ async def score_dependency(
         )
 
     overall = sum(
-        dim_scores[dim].score * DEFAULT_DIMENSION_WEIGHTS[dim]
-        for dim in DIMENSIONS
+        dim_scores[dim].score * DEFAULT_DIMENSION_WEIGHTS[dim] for dim in DIMENSIONS
     )
     overall = round(overall, 2)
 
@@ -102,8 +103,7 @@ async def score_dependency(
     ai_reasoning: str | None = None
     if ai_result:
         ai_reasoning = " | ".join(
-            f"{dim}: {getattr(ai_result, dim).reasoning}"
-            for dim in DIMENSIONS
+            f"{dim}: {getattr(ai_result, dim).reasoning}" for dim in DIMENSIONS
         )
 
     return DependencyScores(
@@ -142,9 +142,7 @@ async def score_all(
 
     scored = await asyncio.gather(*[_bounded_score(d) for d in deps])
 
-    overall_sbom = (
-        sum(s.overall for s in scored) / len(scored) if scored else 0.0
-    )
+    overall_sbom = sum(s.overall for s in scored) / len(scored) if scored else 0.0
     overall_sbom = round(overall_sbom, 2)
 
     grade_dist: dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0, "F": 0}

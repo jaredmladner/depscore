@@ -8,7 +8,14 @@ from typing import Literal
 import click
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 from depscore import __version__
@@ -49,16 +56,22 @@ async def _run_scan(
     try:
         settings = get_settings()
     except ConfigurationError as exc:
-        err_console.print(Panel(str(exc), title="[red]Configuration Error[/red]", border_style="red"))
+        err_console.print(
+            Panel(str(exc), title="[red]Configuration Error[/red]", border_style="red")
+        )
         return 1
 
     try:
         parsed = _parse_sbom(sbom_path, fmt)  # type: ignore[arg-type]
     except SBOMParseError as exc:
-        err_console.print(Panel(str(exc), title="[red]SBOM Parse Error[/red]", border_style="red"))
+        err_console.print(
+            Panel(str(exc), title="[red]SBOM Parse Error[/red]", border_style="red")
+        )
         return 1
 
-    console.print(f"\n[bold]depscore[/bold] v{__version__}  |  [cyan]{sbom_path.name}[/cyan]  |  [green]{len(parsed.components)}[/green] components found\n")
+    console.print(
+        f"\n[bold]depscore[/bold] v{__version__}  |  [cyan]{sbom_path.name}[/cyan]  |  [green]{len(parsed.components)}[/green] components found\n"
+    )
 
     # --- Phase 1: Enrichment ---
     enriched_deps = []
@@ -70,14 +83,22 @@ async def _run_scan(
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Enriching dependencies…", total=len(parsed.components))
+        task = progress.add_task(
+            "Enriching dependencies…", total=len(parsed.components)
+        )
 
         def on_progress(completed: int, total: int, name: str) -> None:
-            progress.update(task, completed=completed, description=f"Enriching [cyan]{name}[/cyan]")
+            progress.update(
+                task, completed=completed, description=f"Enriching [cyan]{name}[/cyan]"
+            )
 
-        enriched_deps = await enrich_all(parsed.components, settings, progress_callback=on_progress)
+        enriched_deps = await enrich_all(
+            parsed.components, settings, progress_callback=on_progress
+        )
 
-    console.print(f"[green]✓[/green] Enrichment complete ({len(enriched_deps)} dependencies)\n")
+    console.print(
+        f"[green]✓[/green] Enrichment complete ({len(enriched_deps)} dependencies)\n"
+    )
 
     # --- Phase 2: Scoring ---
     ai_scorer = None
@@ -91,7 +112,9 @@ async def _run_scan(
         MofNCompleteColumn(),
         console=console,
     ) as progress:
-        score_task = progress.add_task("Scoring dependencies…", total=len(enriched_deps))
+        score_task = progress.add_task(
+            "Scoring dependencies…", total=len(enriched_deps)
+        )
 
         # Wrap score_all to show progress (it runs concurrently so we track after)
         report = await score_all(
@@ -117,18 +140,21 @@ async def _run_scan(
 
     if emit_html:
         from depscore.output.html_writer import write_html
+
         html_path = write_html(report, report_config)
         console.print(f"[green]✓[/green] HTML report: [cyan]{html_path}[/cyan]")
 
     # --- Summary table ---
-    table = Table(title="\nSBOM Score Summary", show_header=True, header_style="bold cyan")
+    table = Table(
+        title="\nSBOM Score Summary", show_header=True, header_style="bold cyan"
+    )
     table.add_column("Metric", style="dim", width=28)
     table.add_column("Value", justify="right")
 
     grade_color = {"A": "green", "B": "yellow", "C": "yellow", "D": "red", "F": "red"}
     g = report.overall_sbom_grade
     table.add_row("Overall SBOM Score", f"[bold]{report.overall_sbom_score:.1f}[/bold]")
-    table.add_row("Overall Grade", f"[{grade_color.get(g,'white')} bold]{g}[/]")
+    table.add_row("Overall Grade", f"[{grade_color.get(g, 'white')} bold]{g}[/]")
     table.add_row("Total Dependencies", str(report.total_dependencies))
     table.add_row("", "")
     for dim, avg in report.dimension_averages.items():
@@ -149,17 +175,41 @@ def main() -> None:
 
 
 @main.command()
-@click.option("--sbom", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the SBOM file")
 @click.option(
-    "--format", "fmt",
+    "--sbom",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the SBOM file",
+)
+@click.option(
+    "--format",
+    "fmt",
     type=click.Choice(["cyclonedx", "spdx", "auto"], case_sensitive=False),
     default="auto",
     show_default=True,
     help="SBOM format (auto-detected if omitted)",
 )
-@click.option("--output", "output_dir", default="./depscore-output", type=click.Path(path_type=Path), show_default=True, help="Output directory")
-@click.option("--html", "emit_html", is_flag=True, default=False, help="Also generate an HTML dashboard")
-@click.option("--no-ai", is_flag=True, default=False, help="Skip AI scoring (rules-based only, faster)")
+@click.option(
+    "--output",
+    "output_dir",
+    default="./depscore-output",
+    type=click.Path(path_type=Path),
+    show_default=True,
+    help="Output directory",
+)
+@click.option(
+    "--html",
+    "emit_html",
+    is_flag=True,
+    default=False,
+    help="Also generate an HTML dashboard",
+)
+@click.option(
+    "--no-ai",
+    is_flag=True,
+    default=False,
+    help="Skip AI scoring (rules-based only, faster)",
+)
 def scan(sbom: Path, fmt: str, output_dir: Path, emit_html: bool, no_ai: bool) -> None:
     """Scan an SBOM and score all dependencies."""
     try:

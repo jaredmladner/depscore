@@ -18,7 +18,7 @@ def _extract_github_repo(component: SBOMComponent) -> str | None:
         if m:
             return f"github.com/{m.group(1)}/{m.group(2).rstrip('.git')}"
     if component.purl and component.purl.startswith("pkg:github/"):
-        rest = component.purl[len("pkg:github/"):].split("@")[0]
+        rest = component.purl[len("pkg:github/") :].split("@")[0]
         parts = rest.split("/")
         if len(parts) >= 2:
             return f"github.com/{parts[0]}/{parts[1]}"
@@ -26,7 +26,9 @@ def _extract_github_repo(component: SBOMComponent) -> str | None:
 
 
 class ScorecardEnricher(BaseEnricher):
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> ScorecardData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> ScorecardData:
         repo = _extract_github_repo(component)
         if not repo:
             return ScorecardData(error="No GitHub repo found for Scorecard lookup")

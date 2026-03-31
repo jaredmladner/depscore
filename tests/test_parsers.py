@@ -54,6 +54,7 @@ def test_spdx_purl_extraction(spdx_path: Path) -> None:
 
 def test_cyclonedx_invalid_file(tmp_path: Path) -> None:
     from depscore.exceptions import SBOMParseError
+
     bad = tmp_path / "bad.json"
     bad.write_text('{"not": "cyclonedx"}')
     with pytest.raises(SBOMParseError):

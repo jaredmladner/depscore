@@ -24,7 +24,9 @@ _SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
 
 
 class OSVEnricher(BaseEnricher):
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> OSVData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> OSVData:
         ecosystem = _ECOSYSTEM_MAP.get(component.ecosystem or "", "")
         if not ecosystem or not component.name:
             return OSVData(error="Unsupported ecosystem or missing name for OSV lookup")

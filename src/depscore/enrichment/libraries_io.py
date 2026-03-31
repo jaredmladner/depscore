@@ -22,17 +22,23 @@ _PLATFORM_MAP = {
 
 
 class LibrariesIOEnricher(BaseEnricher):
-    def __init__(self, api_key: str | None, timeout: float = 30.0, max_retries: int = 3) -> None:
+    def __init__(
+        self, api_key: str | None, timeout: float = 30.0, max_retries: int = 3
+    ) -> None:
         super().__init__(timeout=timeout, max_retries=max_retries)
         self.api_key = api_key
 
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> LibrariesIOData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> LibrariesIOData:
         if not self.api_key:
             return LibrariesIOData(error="No Libraries.io API key configured")
 
         platform = _PLATFORM_MAP.get(component.ecosystem or "")
         if not platform:
-            return LibrariesIOData(error=f"Unsupported ecosystem for Libraries.io: {component.ecosystem}")
+            return LibrariesIOData(
+                error=f"Unsupported ecosystem for Libraries.io: {component.ecosystem}"
+            )
 
         url = f"{BASE_URL}/{platform}/{component.name}"
         try:

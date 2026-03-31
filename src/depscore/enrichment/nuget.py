@@ -11,19 +11,25 @@ BASE_URL = "https://api.nuget.org/v3/registration5"
 
 
 class NuGetEnricher(BaseEnricher):
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> RegistryData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> RegistryData:
         name_lower = component.name.lower()
         url = f"{BASE_URL}/{name_lower}/index.json"
         try:
             data = await self._get(client, url)
         except NotFoundError:
-            return RegistryData(registry="nuget", error=f"Not found on NuGet: {component.name}")
+            return RegistryData(
+                registry="nuget", error=f"Not found on NuGet: {component.name}"
+            )
         except Exception as exc:
             return RegistryData(registry="nuget", error=str(exc))
 
         items = data.get("items", [])
         if not items:
-            return RegistryData(registry="nuget", error=f"Empty NuGet response for: {component.name}")
+            return RegistryData(
+                registry="nuget", error=f"Empty NuGet response for: {component.name}"
+            )
 
         all_versions: list[str] = []
         all_dates: list[datetime] = []

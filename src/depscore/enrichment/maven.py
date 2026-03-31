@@ -19,18 +19,23 @@ def _parse_maven_name(name: str) -> tuple[str, str] | None:
 class MavenEnricher(BaseEnricher):
     BASE = "https://search.maven.org/solrsearch/select"
 
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> RegistryData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> RegistryData:
         coords = _parse_maven_name(component.name)
         if not coords:
             # Try to parse from PURL: pkg:maven/group.id/artifact.id
             if component.purl and component.purl.startswith("pkg:maven/"):
-                rest = component.purl[len("pkg:maven/"):].split("@")[0]
+                rest = component.purl[len("pkg:maven/") :].split("@")[0]
                 parts = rest.split("/")
                 if len(parts) >= 2:
                     coords = (parts[0], parts[1])
 
         if not coords:
-            return RegistryData(registry="maven", error=f"Cannot determine groupId/artifactId for: {component.name}")
+            return RegistryData(
+                registry="maven",
+                error=f"Cannot determine groupId/artifactId for: {component.name}",
+            )
 
         group_id, artifact_id = coords
         query = f"g:{group_id} AND a:{artifact_id}"
@@ -47,7 +52,9 @@ class MavenEnricher(BaseEnricher):
         response = data.get("response", {})
         docs = response.get("docs", [])
         if not docs:
-            return RegistryData(registry="maven", error=f"Not found on Maven Central: {component.name}")
+            return RegistryData(
+                registry="maven", error=f"Not found on Maven Central: {component.name}"
+            )
 
         doc = docs[0]
         latest_version = doc.get("latestVersion") or doc.get("v")

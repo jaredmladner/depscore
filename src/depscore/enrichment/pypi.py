@@ -18,12 +18,16 @@ def _is_prerelease(version: str | None) -> bool | None:
 
 
 class PyPIEnricher(BaseEnricher):
-    async def enrich(self, component: SBOMComponent, client: httpx.AsyncClient) -> RegistryData:
+    async def enrich(
+        self, component: SBOMComponent, client: httpx.AsyncClient
+    ) -> RegistryData:
         url = f"https://pypi.org/pypi/{component.name}/json"
         try:
             data = await self._get(client, url)
         except NotFoundError:
-            return RegistryData(registry="pypi", error=f"Not found on PyPI: {component.name}")
+            return RegistryData(
+                registry="pypi", error=f"Not found on PyPI: {component.name}"
+            )
         except Exception as exc:
             return RegistryData(registry="pypi", error=str(exc))
 
@@ -35,7 +39,8 @@ class PyPIEnricher(BaseEnricher):
 
         # Count non-yanked versions
         total_versions = sum(
-            1 for files in releases.values()
+            1
+            for files in releases.values()
             if files and not all(f.get("yanked", False) for f in files)
         )
 

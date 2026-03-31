@@ -34,7 +34,7 @@ def repo_url_from_purl(purl: str | None) -> str | None:
     if not purl or not purl.startswith("pkg:github/"):
         return None
     # pkg:github/owner/repo@version
-    rest = purl[len("pkg:github/"):]
+    rest = purl[len("pkg:github/") :]
     parts = rest.split("@")[0].split("/")
     if len(parts) >= 2:
         return f"https://github.com/{parts[0]}/{parts[1]}"
@@ -43,8 +43,7 @@ def repo_url_from_purl(purl: str | None) -> str | None:
 
 class SBOMParser(ABC):
     @abstractmethod
-    def parse(self, path: Path) -> ParsedSBOM:
-        ...
+    def parse(self, path: Path) -> ParsedSBOM: ...
 
     def _normalize_component(
         self,

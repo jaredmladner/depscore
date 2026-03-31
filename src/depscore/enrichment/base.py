@@ -5,7 +5,12 @@ from typing import Any, TypeVar
 
 import httpx
 
-from depscore.exceptions import AuthenticationError, NetworkError, NotFoundError, RateLimitError
+from depscore.exceptions import (
+    AuthenticationError,
+    NetworkError,
+    NotFoundError,
+    RateLimitError,
+)
 
 T = TypeVar("T")
 
@@ -29,9 +34,13 @@ class BaseEnricher(ABC):
                 if resp.status_code == 429:
                     retry_after = int(resp.headers.get("Retry-After", 60))
                     await asyncio.sleep(retry_after)
-                    raise RateLimitError(f"Rate limited by {url}", retry_after=retry_after)
+                    raise RateLimitError(
+                        f"Rate limited by {url}", retry_after=retry_after
+                    )
                 if resp.status_code == 401 or resp.status_code == 403:
-                    raise AuthenticationError(f"Auth error {resp.status_code} from {url}")
+                    raise AuthenticationError(
+                        f"Auth error {resp.status_code} from {url}"
+                    )
                 if resp.status_code == 404:
                     raise NotFoundError(f"Not found: {url}")
                 if resp.status_code >= 500:
@@ -50,7 +59,9 @@ class BaseEnricher(ABC):
             wait = (2**attempt) + random.uniform(0, 1)
             await asyncio.sleep(wait)
 
-        raise NetworkError(f"Failed after {self.max_retries} retries: {url}") from last_exc
+        raise NetworkError(
+            f"Failed after {self.max_retries} retries: {url}"
+        ) from last_exc
 
     async def _post(
         self,
@@ -66,7 +77,9 @@ class BaseEnricher(ABC):
                 if resp.status_code == 429:
                     retry_after = int(resp.headers.get("Retry-After", 60))
                     await asyncio.sleep(retry_after)
-                    raise RateLimitError(f"Rate limited by {url}", retry_after=retry_after)
+                    raise RateLimitError(
+                        f"Rate limited by {url}", retry_after=retry_after
+                    )
                 if resp.status_code >= 500:
                     resp.raise_for_status()
                 resp.raise_for_status()
@@ -83,4 +96,6 @@ class BaseEnricher(ABC):
             wait = (2**attempt) + random.uniform(0, 1)
             await asyncio.sleep(wait)
 
-        raise NetworkError(f"POST failed after {self.max_retries} retries: {url}") from last_exc
+        raise NetworkError(
+            f"POST failed after {self.max_retries} retries: {url}"
+        ) from last_exc

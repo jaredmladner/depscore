@@ -25,13 +25,26 @@ async def test_pypi_enricher_success():
     component = _make_component()
     with respx.mock:
         respx.get("https://pypi.org/pypi/requests/json").mock(
-            return_value=httpx.Response(200, json={
-                "info": {"version": "2.31.0"},
-                "releases": {
-                    "2.0.0": [{"upload_time_iso_8601": "2014-01-01T00:00:00+00:00", "yanked": False}],
-                    "2.31.0": [{"upload_time_iso_8601": "2023-05-22T00:00:00+00:00", "yanked": False}],
-                }
-            })
+            return_value=httpx.Response(
+                200,
+                json={
+                    "info": {"version": "2.31.0"},
+                    "releases": {
+                        "2.0.0": [
+                            {
+                                "upload_time_iso_8601": "2014-01-01T00:00:00+00:00",
+                                "yanked": False,
+                            }
+                        ],
+                        "2.31.0": [
+                            {
+                                "upload_time_iso_8601": "2023-05-22T00:00:00+00:00",
+                                "yanked": False,
+                            }
+                        ],
+                    },
+                },
+            )
         )
         async with httpx.AsyncClient() as client:
             enricher = PyPIEnricher()
@@ -64,16 +77,19 @@ async def test_osv_enricher_with_vulns():
     component = _make_component()
     with respx.mock:
         respx.post("https://api.osv.dev/v1/query").mock(
-            return_value=httpx.Response(200, json={
-                "vulns": [
-                    {
-                        "id": "GHSA-xyz-001",
-                        "aliases": ["CVE-2023-12345"],
-                        "severity": [{"type": "CVSS_V3", "score": "8.1"}],
-                        "modified": "2023-10-01T00:00:00Z",
-                    }
-                ]
-            })
+            return_value=httpx.Response(
+                200,
+                json={
+                    "vulns": [
+                        {
+                            "id": "GHSA-xyz-001",
+                            "aliases": ["CVE-2023-12345"],
+                            "severity": [{"type": "CVSS_V3", "score": "8.1"}],
+                            "modified": "2023-10-01T00:00:00Z",
+                        }
+                    ]
+                },
+            )
         )
         async with httpx.AsyncClient() as client:
             enricher = OSVEnricher()
@@ -102,19 +118,22 @@ async def test_osv_enricher_no_vulns():
 
 @pytest.mark.asyncio
 async def test_scorecard_enricher_success():
-    component = _make_component(
-        repository_url="https://github.com/psf/requests"
-    )
+    component = _make_component(repository_url="https://github.com/psf/requests")
     with respx.mock:
-        respx.get("https://api.securityscorecards.dev/projects/github.com/psf/requests").mock(
-            return_value=httpx.Response(200, json={
-                "date": "2024-01-01",
-                "score": 7.5,
-                "checks": [
-                    {"name": "Maintained", "score": 9},
-                    {"name": "Vulnerabilities", "score": 8},
-                ]
-            })
+        respx.get(
+            "https://api.securityscorecards.dev/projects/github.com/psf/requests"
+        ).mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "date": "2024-01-01",
+                    "score": 7.5,
+                    "checks": [
+                        {"name": "Maintained", "score": 9},
+                        {"name": "Vulnerabilities", "score": 8},
+                    ],
+                },
+            )
         )
         async with httpx.AsyncClient() as client:
             enricher = ScorecardEnricher()

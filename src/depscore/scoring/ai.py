@@ -156,7 +156,9 @@ class AIScorer:
             parsed = _AIResponse.model_validate(json.loads(raw))
             return parsed
         except (ValidationError, json.JSONDecodeError, KeyError) as exc:
-            logger.warning("AI response parse error for %s: %s", dep.component.name, exc)
+            logger.warning(
+                "AI response parse error for %s: %s", dep.component.name, exc
+            )
             return None
         except Exception as exc:
             logger.warning("AI scoring error for %s: %s", dep.component.name, exc)

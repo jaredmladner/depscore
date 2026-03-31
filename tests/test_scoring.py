@@ -3,7 +3,12 @@
 import pytest
 
 from depscore.models.dependency import EnrichedDependency
-from depscore.models.enrichment import GitHubData, LibrariesIOData, OSVData, RegistryData
+from depscore.models.enrichment import (
+    GitHubData,
+    LibrariesIOData,
+    OSVData,
+    RegistryData,
+)
 from depscore.models.sbom import SBOMComponent
 from depscore.scoring import rules as rules_mod
 from depscore.scoring.weights import score_to_grade
@@ -20,6 +25,7 @@ def _make_dep(**kwargs) -> EnrichedDependency:
 
 
 # ─── Maturity ─────────────────────────────────────────────────────────────────
+
 
 def test_maturity_stable_well_adopted():
     dep = _make_dep(
@@ -59,6 +65,7 @@ def test_maturity_brand_new():
 
 # ─── Maintainability ─────────────────────────────────────────────────────────
 
+
 def test_maintainability_active():
     dep = _make_dep(
         github=GitHubData(
@@ -94,6 +101,7 @@ def test_maintainability_no_github_data():
 
 # ─── Security Posture ─────────────────────────────────────────────────────────
 
+
 def test_security_no_vulns():
     dep = _make_dep(
         osv=OSVData(vuln_count_total=0),
@@ -125,6 +133,7 @@ def test_security_high_vulns():
 
 # ─── Community Health ─────────────────────────────────────────────────────────
 
+
 def test_community_diverse():
     dep = _make_dep(
         github=GitHubData(total_contributors=200, top_contributor_percent=0.05),
@@ -144,10 +153,21 @@ def test_community_solo():
 
 # ─── Grade thresholds ─────────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("score,expected_grade", [
-    (95.0, "A"), (80.0, "A"), (79.9, "B"), (65.0, "B"),
-    (64.9, "C"), (50.0, "C"), (49.9, "D"), (35.0, "D"),
-    (34.9, "F"), (0.0, "F"),
-])
+
+@pytest.mark.parametrize(
+    "score,expected_grade",
+    [
+        (95.0, "A"),
+        (80.0, "A"),
+        (79.9, "B"),
+        (65.0, "B"),
+        (64.9, "C"),
+        (50.0, "C"),
+        (49.9, "D"),
+        (35.0, "D"),
+        (34.9, "F"),
+        (0.0, "F"),
+    ],
+)
 def test_grade_thresholds(score: float, expected_grade: str) -> None:
     assert score_to_grade(score) == expected_grade
