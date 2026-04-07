@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>depscore — AI-powered SBOM dependency scoring</title>
+  <meta name="description" content="Turn your SBOM into an actionable risk report. depscore scores every dependency across Maturity, Maintainability, Security Posture, and Community Health using Claude AI." />
+  <meta property="og:title" content="depscore — AI-powered SBOM dependency scoring" />
+  <meta property="og:description" content="SBOMs are just dumb reports.....without depscore" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080e1a;
+      --surface: #111827;
+      --surface2: #1a2335;
+      --surface3: #1e2d45;
+      --border: #1f3050;
+      --border2: #2a3f5f;
+      --text: #e8edf5;
+      --muted: #7a8fa8;
+      --muted2: #4d6480;
+      --green: #22c55e;
+      --lime: #84cc16;
+      --yellow: #f59e0b;
+      --orange: #f97316;
+      --red: #ef4444;
+      --indigo: #6366f1;
+      --violet: #818cf8;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --accent-glow: rgba(99,102,241,0.25);
+    }
+
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; line-height: 1.6; overflow-x: hidden; }
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,14,26,0.7);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.2s, background 0.2s;
+      padding: 0 24px;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    nav.scrolled { background: rgba(8,14,26,0.92); border-bottom-color: var(--border); }
+    .nav-left { display: flex; align-items: center; gap: 10px; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-wordmark { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(135deg, var(--violet), var(--indigo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .nav-tagline { font-size: 11px; color: var(--muted2); display: none; }
+    @media(min-width:768px){ .nav-tagline { display: block; } }
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    .nav-right a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color 0.15s; text-decoration: none; }
+    .nav-right a:hover { color: var(--text); }
+    .nav-btn { background: var(--indigo); color: #fff !important; padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; transition: background 0.15s, box-shadow 0.15s !important; }
+    .nav-btn:hover { background: var(--violet) !important; box-shadow: 0 0 20px var(--accent-glow); text-decoration: none !important; }
+    .nav-icon { width: 32px; height: 32px; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative; min-height: 92vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 80px 24px 60px;
+      overflow: hidden;
+    }
+    .hero-orb { position: absolute; border-radius: 50%; pointer-events: none; }
+    .hero-orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%); top: -100px; left: 50%; transform: translateX(-50%); }
+    .hero-orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%); bottom: 0; right: 10%; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3);
+      padding: 5px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--violet);
+      margin-bottom: 28px; position: relative; z-index: 1;
+    }
+    .pulse-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 68px); font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.1; margin-bottom: 24px; position: relative; z-index: 1;
+    }
+    .hero h1 .line1 { display: block; color: var(--muted); }
+    .hero h1 .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--violet) 0%, var(--indigo) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      text-shadow: none; filter: drop-shadow(0 0 32px rgba(99,102,241,0.4));
+    }
+    .hero-sub { font-size: clamp(16px,2vw,20px); color: var(--muted); max-width: 560px; margin-bottom: 36px; position: relative; z-index: 1; line-height: 1.6; }
+    .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 32px; position: relative; z-index: 1; }
+    .btn-primary { background: var(--indigo); color: #fff; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 15px; text-decoration: none; transition: background 0.15s, box-shadow 0.15s; }
+    .btn-primary:hover { background: var(--violet); box-shadow: 0 4px 24px var(--accent-glow); text-decoration: none; }
+    .btn-outline { border: 1.5px solid var(--border2); color: var(--text); padding: 12px 24px; border-radius: 10px; font-weight: 600; font-size: 15px; text-decoration: none; transition: border-color 0.15s, color 0.15s; }
+    .btn-outline:hover { border-color: var(--indigo); color: var(--violet); text-decoration: none; }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; position: relative; z-index: 1; margin-bottom: 48px; }
+    .hero-badges img { height: 20px; }
+    .chevron-down { position: relative; z-index: 1; animation: bounce 2s infinite; color: var(--muted2); font-size: 22px; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+    /* ── Terminal ── */
+    .terminal-wrap { display: flex; justify-content: center; padding: 0 24px 80px; }
+    .terminal {
+      width: 100%; max-width: 760px;
+      background: var(--surface); border: 1px solid var(--border2); border-radius: 14px;
+      box-shadow: 0 0 80px rgba(34,197,94,0.06), 0 20px 60px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    .term-chrome { background: var(--surface2); padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+    .term-dots { display: flex; gap: 6px; }
+    .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .term-dot.red { background: #ef4444; } .term-dot.yellow { background: #f59e0b; } .term-dot.green { background: #22c55e; }
+    .term-title { font-size: 12px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; margin-left: auto; margin-right: auto; padding-right: 54px; }
+    .term-body { padding: 20px 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; min-height: 220px; }
+    .t-green { color: var(--green); }
+    .t-violet { color: var(--violet); }
+    .t-yellow { color: var(--yellow); }
+    .t-muted { color: var(--muted); }
+    .t-red { color: var(--red); }
+    #cursor { display: inline-block; width: 8px; height: 14px; background: var(--green); animation: blink 1s infinite; vertical-align: middle; margin-left: 2px; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Sections ── */
+    section { padding: 80px 24px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; }
+    .section-title { font-size: clamp(26px,4vw,40px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2; }
+    .section-sub { font-size: 16px; color: var(--muted); max-width: 560px; margin-bottom: 48px; line-height: 1.6; }
+    h2.centered { text-align: center; }
+    p.centered { text-align: center; margin-left: auto; margin-right: auto; }
+
+    /* ── Problem / Solution ── */
+    .prob-sol { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+    @media(max-width:768px){ .prob-sol { grid-template-columns: 1fr; } }
+    .prob-card, .sol-card { padding: 36px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); }
+    .prob-card { border-top: 3px solid var(--red); }
+    .sol-card { border-top: 3px solid var(--green); }
+    .prob-sol ul { list-style: none; display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+    .prob-sol li { padding-left: 16px; font-size: 15px; color: var(--muted); line-height: 1.5; }
+    .prob-card li { border-left: 3px solid var(--red); }
+    .sol-card li { border-left: 3px solid var(--green); }
+    .callout { background: var(--surface2); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 16px 20px; font-size: 14px; color: var(--muted); font-style: italic; margin-top: 16px; line-height: 1.6; }
+
+    /* ── Dimension Cards ── */
+    .dim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 16px; margin-bottom: 40px; }
+    .dim-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+      transition: transform 0.15s, box-shadow 0.15s; position: relative; overflow: hidden;
+    }
+    .dim-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .dim-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .dim-card.red::before { background: var(--red); }
+    .dim-card.indigo::before { background: var(--indigo); }
+    .dim-card.yellow::before { background: var(--yellow); }
+    .dim-card.green::before { background: var(--green); }
+    .dim-icon { font-size: 28px; margin-bottom: 12px; }
+    .dim-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .dim-title { font-size: 16px; font-weight: 700; }
+    .weight-badge { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border2); color: var(--muted); }
+    .dim-body { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+    .dim-sources { font-size: 11px; color: var(--muted2); font-family: 'JetBrains Mono', monospace; }
+    .grade-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .grade-pill { display: flex; align-items: center; gap: 8px; padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 700; border: 1px solid transparent; }
+    .grade-pill.A { background: rgba(34,197,94,0.1); border-color: var(--green); color: var(--green); }
+    .grade-pill.B { background: rgba(132,204,22,0.1); border-color: var(--lime); color: var(--lime); }
+    .grade-pill.C { background: rgba(245,158,11,0.1); border-color: var(--yellow); color: var(--yellow); }
+    .grade-pill.D { background: rgba(249,115,22,0.1); border-color: var(--orange); color: var(--orange); }
+    .grade-pill.F { background: rgba(239,68,68,0.1); border-color: var(--red); color: var(--red); }
+
+    /* ── Steps ── */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 24px; position: relative; }
+    .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+    .step-num { width: 44px; height: 44px; border-radius: 50%; background: var(--indigo); color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .step-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .step-body { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+    .code-pill { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--violet); display: block; white-space: pre; overflow-x: auto; }
+
+    /* ── Sources ── */
+    .sources-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 32px; }
+    .source-pill {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 999px;
+      padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted);
+      transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .source-pill:hover { border-color: var(--indigo); color: var(--violet); box-shadow: 0 0 16px var(--accent-glow); }
+
+    /* ── Install ── */
+    .tabs { display: flex; gap: 2px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 20px; width: fit-content; }
+    .tab-btn { padding: 7px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; border: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .tab-btn.active { background: var(--surface3); color: var(--text); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .code-block-wrap { position: relative; }
+    .code-block {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: 12px;
+      padding: 20px 20px 20px 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      color: var(--text); line-height: 1.7; overflow-x: auto; white-space: pre;
+    }
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+      padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, color 0.15s; font-family: 'Inter', sans-serif;
+    }
+    .copy-btn:hover { background: var(--surface3); color: var(--text); }
+    .callouts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+    @media(max-width:600px){ .callouts { grid-template-columns: 1fr; } }
+    .callout-box { padding: 14px 18px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+    .callout-box.indigo { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.3); color: var(--violet); }
+    .callout-box.green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); color: var(--green); }
+
+    /* ── Section divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* ── Footer ── */
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 36px 24px; text-align: center; }
+    .footer-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+    .footer-wordmark { font-size: 17px; font-weight: 800; background: linear-gradient(135deg, var(--violet), var(--indigo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .footer-copy { font-size: 13px; color: var(--muted2); margin-bottom: 12px; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--muted); transition: color 0.15s; text-decoration: none; }
+    .footer-links a:hover { color: var(--violet); }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav id="nav">
+  <a class="nav-logo" href="#">
+    <svg class="nav-icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="ng1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4338ca"/></linearGradient>
+        <linearGradient id="ng2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="white" stop-opacity="0.18"/><stop offset="100%" stop-color="white" stop-opacity="0"/></linearGradient>
+      </defs>
+      <rect width="200" height="200" rx="38" fill="#0f172a"/>
+      <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#ng1)"/>
+      <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#ng2)"/>
+      <rect x="52" y="126" width="24" height="30" rx="5" fill="white" opacity="0.45"/>
+      <rect x="88" y="104" width="24" height="52" rx="5" fill="white" opacity="0.70"/>
+      <rect x="124" y="78" width="24" height="78" rx="5" fill="white" opacity="0.95"/>
+      <rect x="48" y="158" width="104" height="3" rx="1.5" fill="white" opacity="0.25"/>
+      <circle cx="148" cy="52" r="14" fill="#22c55e"/>
+      <text x="148" y="57" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="800" fill="white">A</text>
+    </svg>
+    <span class="nav-wordmark">depscore</span>
+    <span class="nav-tagline">SBOM Dependency Intelligence</span>
+  </a>
+  <div class="nav-right">
+    <a href="docs.html">Docs</a>
+    <a href="https://github.com/jaredmladner/depscore" target="_blank" rel="noopener">GitHub ↗</a>
+    <a href="#install" class="nav-btn">Install</a>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-badge">
+    <span class="pulse-dot"></span>
+    Apache 2.0 &nbsp;·&nbsp; Python 3.11+
+  </div>
+  <h1>
+    <span class="line1">SBOMs are just dumb reports</span>
+    <span class="line2">.....without <code style="font-family:inherit">depscore</code></span>
+  </h1>
+  <p class="hero-sub">
+    Your SBOM tells you <em>what's</em> in your software.<br>
+    depscore tells you <em>how risky</em> each of those dependencies actually is.
+  </p>
+  <div class="hero-ctas">
+    <a href="#install" class="btn-primary">Quick Install ↓</a>
+    <a href="docs.html" class="btn-outline">View Docs →</a>
+  </div>
+  <div class="hero-badges">
+    <img src="https://img.shields.io/badge/python-3.11%2B-6366f1?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+" />
+    <img src="https://img.shields.io/badge/license-Apache%202.0-22c55e?style=flat-square" alt="License" />
+    <img src="https://img.shields.io/badge/SBOM-CycloneDX%20%7C%20SPDX-3b82f6?style=flat-square" alt="SBOM formats" />
+    <img src="https://img.shields.io/badge/AI-Claude%20Sonnet-818cf8?style=flat-square" alt="Claude Sonnet" />
+  </div>
+  <div class="chevron-down">&#8964;</div>
+</section>
+
+<!-- ── Terminal Demo ── -->
+<div class="terminal-wrap">
+  <div class="terminal">
+    <div class="term-chrome">
+      <div class="term-dots">
+        <div class="term-dot red"></div>
+        <div class="term-dot yellow"></div>
+        <div class="term-dot green"></div>
+      </div>
+      <div class="term-title">~ zsh</div>
+    </div>
+    <div class="term-body" id="termBody"><span id="cursor"></span></div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ── Problem / Solution ── -->
+<section>
+  <div class="container">
+    <div class="prob-sol">
+      <div class="prob-card">
+        <div class="section-label" style="color:var(--red)">The Problem</div>
+        <h2 class="section-title">An SBOM is a manifest.<br>Not an answer.</h2>
+        <ul>
+          <li>You have 200 dependencies. Your SBOM lists all of them. None of them have a risk score.</li>
+          <li>That library last touched in 2019? Your SBOM just says it's there.</li>
+          <li>Log4Shell was in millions of SBOMs for months before anyone understood the risk.</li>
+        </ul>
+        <div class="callout">
+          "Your SBOM is basically a grocery receipt. A really long one. With zero nutritional information."
+        </div>
+      </div>
+      <div class="sol-card">
+        <div class="section-label" style="color:var(--green)">The Solution</div>
+        <h2 class="section-title">depscore turns receipts into risk reports.</h2>
+        <ul>
+          <li>Every dependency scored 0–100 across 4 risk dimensions — automatically.</li>
+          <li>Real data from GitHub, OSV, OpenSSF Scorecard, and package registries.</li>
+          <li>Claude AI synthesizes signals into nuanced scores with written reasoning per package.</li>
+        </ul>
+        <div style="margin-top:20px;font-size:14px;color:var(--muted)">Output: <strong style="color:var(--text)">JSON report</strong> + <strong style="color:var(--text)">interactive HTML dashboard</strong>. No server required.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── Scoring Dimensions ── -->
+<section>
+  <div class="container">
+    <h2 class="section-title centered">What depscore actually measures</h2>
+    <p class="section-sub centered">Four dimensions. One overall score. Letter grade per dependency.</p>
+    <div class="dim-grid">
+      <div class="dim-card red">
+        <div class="dim-icon">🛡️</div>
+        <div class="dim-header">
+          <div class="dim-title">Security Posture</div>
+          <span class="weight-badge">35%</span>
+        </div>
+        <div class="dim-body">CVE history &amp; severity, SECURITY.md presence, branch protection, signed commits, OpenSSF Scorecard.</div>
+        <div class="dim-sources">OSV · OpenSSF · GitHub</div>
+      </div>
+      <div class="dim-card indigo">
+        <div class="dim-icon">🔧</div>
+        <div class="dim-header">
+          <div class="dim-title">Maintainability</div>
+          <span class="weight-badge">30%</span>
+        </div>
+        <div class="dim-body">Commit recency &amp; frequency, PR response time, bus factor (contributor concentration).</div>
+        <div class="dim-sources">GitHub API</div>
+      </div>
+      <div class="dim-card yellow">
+        <div class="dim-icon">🌱</div>
+        <div class="dim-header">
+          <div class="dim-title">Maturity</div>
+          <span class="weight-badge">20%</span>
+        </div>
+        <div class="dim-body">Version stability, project age, release cadence, download adoption across registries.</div>
+        <div class="dim-sources">PyPI · npm · Maven · NuGet · Libraries.io</div>
+      </div>
+      <div class="dim-card green">
+        <div class="dim-icon">🌐</div>
+        <div class="dim-header">
+          <div class="dim-title">Community Health</div>
+          <span class="weight-badge">15%</span>
+        </div>
+        <div class="dim-body">Contributor diversity, geographic &amp; corporate concentration, SourceRank.</div>
+        <div class="dim-sources">GitHub · Libraries.io</div>
+      </div>
+    </div>
+    <div class="grade-pills">
+      <div class="grade-pill A">A &nbsp;<span style="font-weight:400;font-size:12px">80–100</span></div>
+      <div class="grade-pill B">B &nbsp;<span style="font-weight:400;font-size:12px">65–79</span></div>
+      <div class="grade-pill C">C &nbsp;<span style="font-weight:400;font-size:12px">50–64</span></div>
+      <div class="grade-pill D">D &nbsp;<span style="font-weight:400;font-size:12px">35–49</span></div>
+      <div class="grade-pill F">F &nbsp;<span style="font-weight:400;font-size:12px">0–34</span></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── How It Works ── -->
+<section>
+  <div class="container">
+    <h2 class="section-title centered">Three steps to a risk report</h2>
+    <p class="section-sub centered" style="margin:0 auto 48px">Works with any SBOM tool. Takes minutes, not weeks.</p>
+    <div class="steps">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div class="step-title">Generate your SBOM</div>
+        <div class="step-body">Use Syft, Trivy, or any CycloneDX/SPDX-compatible tool to produce a JSON SBOM from your codebase or container image.</div>
+        <code class="code-pill">syft dir:. -o cyclonedx-json > sbom.json</code>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div class="step-title">Run depscore scan</div>
+        <div class="step-body">depscore enriches every dependency in parallel — GitHub, OSV, Scorecard, registries — then scores with rules + Claude AI.</div>
+        <code class="code-pill">depscore scan --sbom sbom.json --html</code>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div class="step-title">Act on the report</div>
+        <div class="step-body">JSON report + interactive HTML dashboard. Sort by risk, drill into CVEs, read AI reasoning per package. Know what to fix first.</div>
+        <code class="code-pill">open depscore-output/depscore-report.html</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── Data Sources ── -->
+<section style="padding:60px 24px">
+  <div class="container" style="text-align:center">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Powered by real data from 8 authoritative sources</h3>
+    <p style="font-size:14px;color:var(--muted)">depscore enriches every dependency before scoring — no guessing.</p>
+    <div class="sources-grid">
+      <span class="source-pill">⚡ GitHub API</span>
+      <span class="source-pill">🔐 OpenSSF Scorecard</span>
+      <span class="source-pill">🐛 OSV Database</span>
+      <span class="source-pill">📦 Libraries.io</span>
+      <span class="source-pill">🐍 PyPI</span>
+      <span class="source-pill">📦 npm</span>
+      <span class="source-pill">☕ Maven Central</span>
+      <span class="source-pill">🟣 NuGet</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ── Install ── -->
+<section id="install">
+  <div class="container">
+    <h2 class="section-title">Get started in 60 seconds</h2>
+    <p class="section-sub">Requirements: Python 3.11+. Needs a GitHub token and Anthropic API key (or run <code style="font-family:JetBrains Mono,monospace;font-size:13px;color:var(--violet)">--no-ai</code> for free).</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(this,'t1')">From Source</button>
+      <button class="tab-btn" onclick="switchTab(this,'t2')">Docker</button>
+      <button class="tab-btn" onclick="switchTab(this,'t3')">Rules-Only (Free)</button>
+    </div>
+
+    <div id="t1" class="tab-pane active">
+      <div class="code-block-wrap">
+        <pre class="code-block"><span class="t-muted"># Clone and install</span>
+git clone https://github.com/jaredmladner/depscore.git
+cd depscore &amp;&amp; pip install .
+
+<span class="t-muted"># Configure API keys</span>
+cp .env.example .env
+<span class="t-muted"># Edit .env: add GITHUB_TOKEN and ANTHROPIC_API_KEY</span>
+
+<span class="t-muted"># Generate an SBOM with Syft, then score it</span>
+syft dir:. -o cyclonedx-json > sbom.json
+depscore scan --sbom sbom.json --html</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+    </div>
+
+    <div id="t2" class="tab-pane">
+      <div class="code-block-wrap">
+        <pre class="code-block">docker run --rm \
+  -e GITHUB_TOKEN=$GITHUB_TOKEN \
+  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  -v ./sbom.json:/sbom/sbom.json:ro \
+  -v $(pwd)/report:/output \
+  ghcr.io/jaredmladner/depscore:latest \
+  scan --sbom /sbom/sbom.json --output /output --html</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+    </div>
+
+    <div id="t3" class="tab-pane">
+      <div class="code-block-wrap">
+        <pre class="code-block"><span class="t-muted"># No Anthropic key needed — free, fast, deterministic</span>
+depscore scan --sbom sbom.json --no-ai --html</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+    </div>
+
+    <div class="callouts">
+      <div class="callout-box indigo">💡 No Anthropic API key? Use <strong>--no-ai</strong> for free rules-based scoring with no AI cost.</div>
+      <div class="callout-box green">💰 API cost estimate: ~$0.03–$0.05 for 10 deps · ~$0.30–$0.50 for 100 deps using claude-sonnet-4-6.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-brand">
+    <svg width="28" height="28" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="fg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4338ca"/></linearGradient>
+      </defs>
+      <rect width="200" height="200" rx="38" fill="#0f172a"/>
+      <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#fg1)"/>
+      <rect x="52" y="126" width="24" height="30" rx="5" fill="white" opacity="0.45"/>
+      <rect x="88" y="104" width="24" height="52" rx="5" fill="white" opacity="0.70"/>
+      <rect x="124" y="78" width="24" height="78" rx="5" fill="white" opacity="0.95"/>
+      <circle cx="148" cy="52" r="14" fill="#22c55e"/>
+      <text x="148" y="57" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="800" fill="white">A</text>
+    </svg>
+    <span class="footer-wordmark">depscore</span>
+  </div>
+  <div class="footer-copy">© 2026 Jared Ladner</div>
+  <div class="footer-links">
+    <a href="https://github.com/jaredmladner/depscore/blob/main/LICENSE" target="_blank">Apache 2.0 License</a>
+    <a href="https://github.com/jaredmladner/depscore" target="_blank">GitHub</a>
+    <a href="docs.html">Docs</a>
+    <a href="https://anthropic.com" target="_blank">Made with Claude</a>
+  </div>
+</footer>
+
+<script>
+  // Nav scroll effect
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // Tab switching
+  function switchTab(btn, id) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(id).classList.add('active');
+  }
+
+  // Copy buttons
+  function copyCode(btn) {
+    const code = btn.previousElementSibling.textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  }
+
+  // Typewriter terminal animation
+  const lines = [
+    { text: '$ ', cls: 't-green' },
+    { text: 'depscore scan --sbom sbom.json --html', cls: '' },
+    { text: '\n\n' },
+    { text: 'depscore v0.1.0', cls: '' },
+    { text: '  |  sbom.json  |  ', cls: 't-muted' },
+    { text: '42 components found', cls: '' },
+    { text: '\n\n' },
+    { text: '  ✓ ', cls: 't-green' },
+    { text: 'Enrichment complete (42 dependencies)', cls: 't-muted' },
+    { text: '\n' },
+    { text: '  ✓ ', cls: 't-green' },
+    { text: 'Scoring complete', cls: 't-muted' },
+    { text: '\n\n' },
+    { text: '  ✓ ', cls: 't-green' },
+    { text: 'JSON: ./depscore-output/depscore-report.json', cls: 't-muted' },
+    { text: '\n' },
+    { text: '  ✓ ', cls: 't-green' },
+    { text: 'HTML: ./depscore-output/depscore-report.html', cls: 't-muted' },
+    { text: '\n\n' },
+    { text: '  Overall SBOM Score   ', cls: 't-muted' },
+    { text: '74.3', cls: 't-violet' },
+    { text: '   Grade: ', cls: 't-muted' },
+    { text: 'C', cls: 't-yellow' },
+    { text: '\n' },
+    { text: '  Security Posture     ', cls: 't-muted' },
+    { text: '65.1', cls: 't-violet' },
+    { text: '\n' },
+    { text: '  Maintainability      ', cls: 't-muted' },
+    { text: '70.5', cls: 't-violet' },
+    { text: '\n' },
+    { text: '  Maturity             ', cls: 't-muted' },
+    { text: '81.2', cls: 't-violet' },
+    { text: '\n' },
+    { text: '  Community Health     ', cls: 't-muted' },
+    { text: '77.8', cls: 't-violet' },
+  ];
+
+  const termBody = document.getElementById('termBody');
+  const cursor = document.getElementById('cursor');
+
+  let segIdx = 0, charIdx = 0;
+  function type() {
+    if (segIdx >= lines.length) return;
+    const seg = lines[segIdx];
+    if (charIdx === 0) {
+      const span = document.createElement('span');
+      if (seg.cls) span.className = seg.cls;
+      span.id = 'seg_' + segIdx;
+      cursor.before(span);
+    }
+    const span = document.getElementById('seg_' + segIdx);
+    const ch = seg.text[charIdx];
+    span.textContent += ch;
+    charIdx++;
+    if (charIdx >= seg.text.length) { segIdx++; charIdx = 0; }
+    setTimeout(type, ch === '\n' ? 60 : 22);
+  }
+  window.addEventListener('DOMContentLoaded', () => setTimeout(type, 600));
+</script>
+</body>
+</html>
