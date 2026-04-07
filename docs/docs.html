@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>depscore — Documentation</title>
+  <meta name="description" content="Complete documentation for depscore: installation, configuration, CLI reference, scoring, output formats, Docker, and FAQ." />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080e1a; --surface: #111827; --surface2: #1a2335; --surface3: #1e2d45;
+      --border: #1f3050; --border2: #2a3f5f;
+      --text: #e8edf5; --muted: #7a8fa8; --muted2: #4d6480;
+      --green: #22c55e; --lime: #84cc16; --yellow: #f59e0b; --orange: #f97316; --red: #ef4444;
+      --indigo: #6366f1; --violet: #818cf8;
+      --accent: #6366f1; --accent-light: #818cf8; --accent-glow: rgba(99,102,241,0.25);
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; font-size: 15px; line-height: 1.7; }
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--surface2); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; color: var(--violet); }
+
+    /* ── Top nav ── */
+    .topnav {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(8,14,26,0.92); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      height: 56px; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; }
+    .nav-icon { width: 28px; height: 28px; }
+    .nav-wordmark { font-size: 17px; font-weight: 800; background: linear-gradient(135deg, var(--violet), var(--indigo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    .nav-right a { font-size: 13px; font-weight: 500; color: var(--muted); transition: color 0.15s; text-decoration: none; }
+    .nav-right a:hover { color: var(--text); }
+    .nav-version { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.3); color: var(--violet); font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Layout ── */
+    .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 56px); }
+    @media(max-width:900px) { .layout { grid-template-columns: 1fr; } .sidebar { display: none; } }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky; top: 56px; height: calc(100vh - 56px);
+      overflow-y: auto; padding: 24px 0 24px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    .sidebar-search { padding: 0 16px 16px; }
+    .sidebar-search input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); border-radius: 8px; padding: 7px 12px; font-size: 13px;
+      font-family: 'Inter', sans-serif; outline: none;
+    }
+    .sidebar-search input:focus { border-color: var(--indigo); }
+    .sidebar-search input::placeholder { color: var(--muted2); }
+    .sidebar-group { margin-bottom: 4px; }
+    .sidebar-group-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted2); padding: 12px 20px 6px; }
+    .sidebar-link {
+      display: block; padding: 6px 20px; font-size: 13px; color: var(--muted);
+      text-decoration: none; transition: color 0.1s, background 0.1s; border-left: 2px solid transparent;
+    }
+    .sidebar-link:hover { color: var(--text); background: var(--surface2); text-decoration: none; }
+    .sidebar-link.active { color: var(--violet); border-left-color: var(--indigo); background: rgba(99,102,241,0.08); }
+    .sidebar-bottom { padding: 20px 20px 0; border-top: 1px solid var(--border); margin-top: 16px; }
+    .sidebar-bottom a { font-size: 12px; color: var(--muted2); display: block; margin-bottom: 6px; text-decoration: none; }
+    .sidebar-bottom a:hover { color: var(--muted); }
+
+    /* ── Main content ── */
+    .main { padding: 48px 60px 80px; max-width: 860px; }
+    @media(max-width:1100px) { .main { padding: 40px 32px 60px; } }
+
+    /* ── Doc sections ── */
+    .doc-section { margin-bottom: 64px; }
+    .doc-section h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 8px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .doc-section h2:first-child { border-top: none; padding-top: 0; }
+    .doc-section h3 { font-size: 17px; font-weight: 700; margin: 28px 0 10px; color: var(--text); }
+    .doc-section p { color: var(--muted); margin-bottom: 14px; line-height: 1.7; }
+    .doc-section p strong { color: var(--text); }
+    .doc-section ul, .doc-section ol { color: var(--muted); padding-left: 20px; margin-bottom: 14px; }
+    .doc-section li { margin-bottom: 6px; line-height: 1.6; }
+
+    /* ── Code blocks ── */
+    .code-wrap { position: relative; margin: 16px 0; }
+    .code-block {
+      background: var(--surface); border: 1px solid var(--border2); border-radius: 12px;
+      padding: 18px 48px 18px 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      color: var(--text); line-height: 1.7; overflow-x: auto; white-space: pre;
+      display: block;
+    }
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+      padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: background 0.15s, color 0.15s;
+    }
+    .copy-btn:hover { background: var(--surface3); color: var(--text); }
+    .t-green { color: var(--green); }
+    .t-violet { color: var(--violet); }
+    .t-muted { color: var(--muted); }
+    .t-yellow { color: var(--yellow); }
+
+    /* ── Tables ── */
+    .doc-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 13px; }
+    .doc-table th { background: var(--surface2); padding: 9px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .doc-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+    .doc-table td:first-child { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--violet); white-space: nowrap; }
+    .doc-table tr:last-child td { border-bottom: none; }
+    .req-badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: 'Inter', sans-serif; }
+    .req-badge.yes { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .req-badge.no { background: var(--surface2); color: var(--muted2); border: 1px solid var(--border); }
+
+    /* ── Callout boxes ── */
+    .callout { padding: 14px 18px; border-radius: 10px; font-size: 13px; line-height: 1.6; margin: 16px 0; }
+    .callout.warning { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); color: var(--yellow); }
+    .callout.info { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.3); color: var(--violet); }
+    .callout.success { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); color: var(--green); }
+    .callout strong { color: inherit; }
+
+    /* ── Grade pills ── */
+    .grade { display: inline-block; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    .grade-A { background: rgba(34,197,94,0.15); color: var(--green); }
+    .grade-B { background: rgba(132,204,22,0.15); color: var(--lime); }
+    .grade-C { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .grade-D { background: rgba(249,115,22,0.15); color: var(--orange); }
+    .grade-F { background: rgba(239,68,68,0.15); color: var(--red); }
+
+    /* ── FAQ accordion ── */
+    .faq-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .faq-q {
+      width: 100%; background: var(--surface); border: none; color: var(--text);
+      padding: 16px 20px; text-align: left; font-size: 14px; font-weight: 600;
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      font-family: 'Inter', sans-serif; transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--surface2); }
+    .faq-q .faq-arrow { transition: transform 0.2s; color: var(--muted); font-size: 18px; }
+    .faq-q.open .faq-arrow { transform: rotate(180deg); }
+    .faq-a {
+      max-height: 0; overflow: hidden; transition: max-height 0.25s ease, padding 0.2s;
+      background: var(--surface2); padding: 0 20px; font-size: 14px; color: var(--muted); line-height: 1.7;
+    }
+    .faq-a.open { max-height: 400px; padding: 16px 20px; }
+
+    /* ── Footer ── */
+    footer { background: var(--surface); border-top: 1px solid var(--border); padding: 28px 24px; text-align: center; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .footer-links a { font-size: 13px; color: var(--muted2); text-decoration: none; transition: color 0.15s; }
+    .footer-links a:hover { color: var(--violet); }
+    .footer-copy { font-size: 12px; color: var(--muted2); margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<nav class="topnav">
+  <a class="nav-logo" href="index.html">
+    <svg class="nav-icon" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="ng1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#4338ca"/></linearGradient>
+        <linearGradient id="ng2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="white" stop-opacity="0.18"/><stop offset="100%" stop-color="white" stop-opacity="0"/></linearGradient>
+      </defs>
+      <rect width="200" height="200" rx="38" fill="#0f172a"/>
+      <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#ng1)"/>
+      <path d="M100 22 L170 50 L170 108 C170 152 136 174 100 188 C64 174 30 152 30 108 L30 50 Z" fill="url(#ng2)"/>
+      <rect x="52" y="126" width="24" height="30" rx="5" fill="white" opacity="0.45"/>
+      <rect x="88" y="104" width="24" height="52" rx="5" fill="white" opacity="0.70"/>
+      <rect x="124" y="78" width="24" height="78" rx="5" fill="white" opacity="0.95"/>
+      <rect x="48" y="158" width="104" height="3" rx="1.5" fill="white" opacity="0.25"/>
+      <circle cx="148" cy="52" r="14" fill="#22c55e"/>
+      <text x="148" y="57" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" font-weight="800" fill="white">A</text>
+    </svg>
+    <span class="nav-wordmark">depscore</span>
+  </a>
+  <div class="nav-right">
+    <span class="nav-version">v0.1.0</span>
+    <a href="index.html">Home</a>
+    <a href="https://github.com/jaredmladner/depscore" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-search">
+      <input type="search" id="sidebarSearch" placeholder="Search docs…" />
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Getting Started</div>
+      <a class="sidebar-link" href="#installation">Installation</a>
+      <a class="sidebar-link" href="#configuration">Configuration</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">CLI Reference</div>
+      <a class="sidebar-link" href="#cli-scan">depscore scan</a>
+      <a class="sidebar-link" href="#cli-options">All Options</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">SBOM Formats</div>
+      <a class="sidebar-link" href="#cyclonedx">CycloneDX</a>
+      <a class="sidebar-link" href="#spdx">SPDX</a>
+      <a class="sidebar-link" href="#generating-sboms">Generating with Syft</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Scoring</div>
+      <a class="sidebar-link" href="#dimensions">Dimensions &amp; Weights</a>
+      <a class="sidebar-link" href="#hybrid-scoring">Hybrid Scoring</a>
+      <a class="sidebar-link" href="#grade-thresholds">Grade Thresholds</a>
+      <a class="sidebar-link" href="#api-cost">API Cost Estimates</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Output Formats</div>
+      <a class="sidebar-link" href="#json-output">JSON Report</a>
+      <a class="sidebar-link" href="#html-output">HTML Dashboard</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Docker</div>
+      <a class="sidebar-link" href="#docker-quickstart">Quick Start</a>
+      <a class="sidebar-link" href="#docker-env">Environment Variables</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Help</div>
+      <a class="sidebar-link" href="#faq">FAQ</a>
+    </div>
+
+    <div class="sidebar-bottom">
+      <a href="https://github.com/jaredmladner/depscore/blob/main/LICENSE" target="_blank">Apache 2.0 License</a>
+      <a href="https://github.com/jaredmladner/depscore/issues" target="_blank">Report an Issue ↗</a>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main">
+
+    <!-- Installation -->
+    <div class="doc-section" id="installation">
+      <h2>Installation</h2>
+      <p><strong>Requirements:</strong> Python 3.11 or later.</p>
+
+      <h3>From Source</h3>
+      <div class="code-wrap">
+        <pre class="code-block">git clone https://github.com/jaredmladner/depscore.git
+cd depscore
+pip install .</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>With Dev Dependencies</h3>
+      <div class="code-wrap">
+        <pre class="code-block">pip install ".[dev]"</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>Verify Install</h3>
+      <div class="code-wrap">
+        <pre class="code-block">depscore --version
+<span class="t-muted"># depscore, version 0.1.0</span></pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+    </div>
+
+    <!-- Configuration -->
+    <div class="doc-section" id="configuration">
+      <h2>Configuration</h2>
+      <p>depscore reads configuration from environment variables. Copy <code>.env.example</code> to <code>.env</code> and fill in your credentials.</p>
+      <div class="code-wrap">
+        <pre class="code-block">cp .env.example .env</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <div class="callout warning">
+        ⚠️ <strong>Important:</strong> Add credits to your Anthropic account <strong>before</strong> generating your API key. Keys created on a zero-balance account will continue to fail with a billing error even after credits are added later. Generate a fresh key after funding your account.
+      </div>
+
+      <table class="doc-table">
+        <thead>
+          <tr><th>Variable</th><th>Required</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>GITHUB_TOKEN</td><td><span class="req-badge yes">Required</span></td><td>—</td><td>GitHub personal access token. Read-only scopes are sufficient.</td></tr>
+          <tr><td>ANTHROPIC_API_KEY</td><td><span class="req-badge yes">Required</span></td><td>—</td><td>Anthropic API key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Not needed with <code>--no-ai</code>.</td></tr>
+          <tr><td>LIBRARIES_IO_API_KEY</td><td><span class="req-badge no">Optional</span></td><td>—</td><td>Improves enrichment quality for dependency and SourceRank data.</td></tr>
+          <tr><td>DEPSCORE_AI_ENABLED</td><td><span class="req-badge no">Optional</span></td><td>true</td><td>Set to <code>false</code> to disable AI scoring globally (same as <code>--no-ai</code>).</td></tr>
+          <tr><td>DEPSCORE_AI_BLEND_WEIGHT</td><td><span class="req-badge no">Optional</span></td><td>0.6</td><td>AI layer weight (0.0–1.0). 0.0 = rules only, 1.0 = AI only.</td></tr>
+          <tr><td>DEPSCORE_CONCURRENCY_LIMIT</td><td><span class="req-badge no">Optional</span></td><td>10</td><td>Max parallel dependency enrichments. Reduce if hitting rate limits.</td></tr>
+          <tr><td>DEPSCORE_REQUEST_TIMEOUT_SECONDS</td><td><span class="req-badge no">Optional</span></td><td>30</td><td>HTTP timeout per API request in seconds.</td></tr>
+          <tr><td>DEPSCORE_MAX_RETRIES</td><td><span class="req-badge no">Optional</span></td><td>3</td><td>Retry attempts on transient failures (429, 5xx).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CLI Reference -->
+    <div class="doc-section" id="cli-scan">
+      <h2>CLI Reference</h2>
+
+      <h3 id="cli-scan">depscore scan</h3>
+      <p>The primary command. Parses an SBOM, enriches all dependencies, scores them, and writes a report.</p>
+      <div class="code-wrap">
+        <pre class="code-block">depscore scan [OPTIONS]</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3 id="cli-options">Options</h3>
+      <table class="doc-table">
+        <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>--sbom PATH</td><td>Path</td><td>required</td><td>Path to the SBOM file (CycloneDX or SPDX JSON).</td></tr>
+          <tr><td>--format</td><td>Choice</td><td>auto</td><td><code>cyclonedx</code>, <code>spdx</code>, or <code>auto</code>. Auto-detected from file content if omitted.</td></tr>
+          <tr><td>--output PATH</td><td>Path</td><td>./depscore-output</td><td>Directory to write report files into.</td></tr>
+          <tr><td>--html</td><td>Flag</td><td>false</td><td>Also generate an interactive HTML dashboard alongside the JSON report.</td></tr>
+          <tr><td>--no-ai</td><td>Flag</td><td>false</td><td>Skip AI scoring. Uses rules-based scoring only. No Anthropic key required.</td></tr>
+          <tr><td>--version</td><td>Flag</td><td>—</td><td>Print version and exit.</td></tr>
+          <tr><td>--help</td><td>Flag</td><td>—</td><td>Show help message and exit.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Examples</h3>
+      <div class="code-wrap">
+        <pre class="code-block"><span class="t-muted"># Basic scan with JSON output</span>
+depscore scan --sbom ./sbom.json
+
+<span class="t-muted"># Scan with HTML dashboard</span>
+depscore scan --sbom ./sbom.json --html
+
+<span class="t-muted"># Explicit format, custom output directory</span>
+depscore scan --sbom ./sbom.json --format cyclonedx --output ./reports --html
+
+<span class="t-muted"># Rules-only mode (free, no Anthropic key needed)</span>
+depscore scan --sbom ./sbom.json --no-ai --html</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>Exit Codes</h3>
+      <table class="doc-table">
+        <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Success</td></tr>
+          <tr><td>1</td><td>Configuration error, SBOM parse failure, or scoring error</td></tr>
+          <tr><td>130</td><td>Interrupted (Ctrl+C)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SBOM Formats -->
+    <div class="doc-section" id="cyclonedx">
+      <h2>SBOM Formats</h2>
+
+      <h3>CycloneDX JSON</h3>
+      <p>depscore supports <strong>CycloneDX JSON</strong> (spec versions 1.4 and later). The file must contain a <code>bomFormat: "CycloneDX"</code> key. Components are parsed from the top-level <code>components</code> array with PURL and external references.</p>
+
+      <h3 id="spdx">SPDX JSON</h3>
+      <p>depscore supports <strong>SPDX JSON</strong> 2.3+. Packages are extracted from the <code>packages</code> array. External document references and <code>externalRefs</code> are used to resolve repository URLs and ecosystems.</p>
+
+      <h3>Auto-Detection</h3>
+      <p>When <code>--format auto</code> (the default), depscore inspects the file content: if it contains <code>CycloneDX</code> or <code>bomFormat</code> it uses the CycloneDX parser; otherwise it falls back to SPDX.</p>
+
+      <h3 id="generating-sboms">Generating SBOMs with Syft</h3>
+      <p><a href="https://github.com/anchore/syft" target="_blank">Syft</a> is the recommended tool for generating SBOMs.</p>
+      <div class="code-wrap">
+        <pre class="code-block"><span class="t-muted"># Install Syft (macOS)</span>
+brew install anchore/syft/syft
+
+<span class="t-muted"># Install Syft (Linux/macOS via curl)</span>
+curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh
+
+<span class="t-muted"># Scan a directory → CycloneDX JSON</span>
+syft dir:. -o cyclonedx-json > sbom.json
+
+<span class="t-muted"># Scan a container image → SPDX JSON</span>
+syft ubuntu:latest -o spdx-json > sbom.spdx.json
+
+<span class="t-muted"># Then score it</span>
+depscore scan --sbom sbom.json --html</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+    </div>
+
+    <!-- Scoring -->
+    <div class="doc-section" id="dimensions">
+      <h2>Scoring</h2>
+
+      <h3>Dimensions &amp; Weights</h3>
+      <table class="doc-table">
+        <thead><tr><th>Dimension</th><th>Weight</th><th>What it measures</th><th>Data sources</th></tr></thead>
+        <tbody>
+          <tr><td>security_posture</td><td>35%</td><td>CVE history &amp; severity, SECURITY.md, branch protection, signed commits, OpenSSF Scorecard</td><td>OSV, OpenSSF, GitHub</td></tr>
+          <tr><td>maintainability</td><td>30%</td><td>Commit recency &amp; frequency, PR response time, bus factor</td><td>GitHub API</td></tr>
+          <tr><td>maturity</td><td>20%</td><td>Version stability, project age, release cadence, download adoption</td><td>PyPI, npm, Maven, NuGet, Libraries.io</td></tr>
+          <tr><td>community_health</td><td>15%</td><td>Contributor diversity, geographic/corporate concentration, SourceRank</td><td>GitHub, Libraries.io</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="hybrid-scoring">Hybrid Scoring (Rules + AI)</h3>
+      <p>depscore blends two scoring layers for each dependency:</p>
+      <ul>
+        <li><strong>Rules layer (40%)</strong> — deterministic math on raw metrics: days since last commit, CVE count, version prefix, release frequency, etc.</li>
+        <li><strong>AI layer (60%)</strong> — <code>claude-sonnet-4-6</code> receives all enriched signals and returns a score with written reasoning per dimension.</li>
+      </ul>
+      <div class="code-wrap">
+        <pre class="code-block"><span class="t-muted"># Blend formula (per dimension)</span>
+final_score = (rules_score × 0.40) + (ai_score × 0.60)</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+      <p>The AI weight is configurable via <code>DEPSCORE_AI_BLEND_WEIGHT</code>. If AI scoring fails or <code>--no-ai</code> is used, depscore automatically falls back to rules-only scoring and flags <code>"ai_available": false</code> in the output.</p>
+
+      <h3 id="grade-thresholds">Grade Thresholds</h3>
+      <table class="doc-table">
+        <thead><tr><th>Grade</th><th>Score range</th><th>Interpretation</th></tr></thead>
+        <tbody>
+          <tr><td><span class="grade grade-A">A</span></td><td>80 – 100</td><td>Low risk. Well-maintained, active, secure.</td></tr>
+          <tr><td><span class="grade grade-B">B</span></td><td>65 – 79</td><td>Acceptable. Minor concerns worth monitoring.</td></tr>
+          <tr><td><span class="grade grade-C">C</span></td><td>50 – 64</td><td>Moderate risk. Review and consider alternatives.</td></tr>
+          <tr><td><span class="grade grade-D">D</span></td><td>35 – 49</td><td>High risk. Actively investigate before use.</td></tr>
+          <tr><td><span class="grade grade-F">F</span></td><td>0 – 34</td><td>Critical risk. Remediate or replace immediately.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="api-cost">API Cost Estimates</h3>
+      <p>AI scoring uses <code>claude-sonnet-4-6</code>, billed per token at Anthropic API rates.</p>
+      <table class="doc-table">
+        <thead><tr><th>Dependencies</th><th>Estimated cost</th></tr></thead>
+        <tbody>
+          <tr><td>10 deps</td><td>~$0.03 – $0.05</td></tr>
+          <tr><td>50 deps</td><td>~$0.15 – $0.25</td></tr>
+          <tr><td>100 deps</td><td>~$0.30 – $0.50</td></tr>
+          <tr><td>500 deps</td><td>~$1.50 – $2.50</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">💡 Use <code>--no-ai</code> for zero AI cost. Rules-based scoring is free and deterministic, just less nuanced.</div>
+    </div>
+
+    <!-- Output Formats -->
+    <div class="doc-section" id="json-output">
+      <h2>Output Formats</h2>
+
+      <h3>JSON Report</h3>
+      <p>Written to <code>&lt;output-dir&gt;/depscore-report.json</code>. Contains the full scoring results for every dependency.</p>
+      <div class="code-wrap">
+        <pre class="code-block">{
+  <span class="t-violet">"overall_sbom_score"</span>: <span class="t-yellow">74.3</span>,
+  <span class="t-violet">"overall_sbom_grade"</span>: <span class="t-green">"C"</span>,
+  <span class="t-violet">"total_dependencies"</span>: <span class="t-yellow">42</span>,
+  <span class="t-violet">"grade_distribution"</span>: { <span class="t-green">"A"</span>: 8, <span class="t-green">"B"</span>: 12, <span class="t-green">"C"</span>: 14, <span class="t-green">"D"</span>: 6, <span class="t-green">"F"</span>: 2 },
+  <span class="t-violet">"dimension_averages"</span>: {
+    <span class="t-green">"security_posture"</span>: <span class="t-yellow">65.1</span>,
+    <span class="t-green">"maintainability"</span>: <span class="t-yellow">70.5</span>,
+    <span class="t-green">"maturity"</span>: <span class="t-yellow">81.2</span>,
+    <span class="t-green">"community_health"</span>: <span class="t-yellow">77.8</span>
+  },
+  <span class="t-violet">"scores"</span>: [
+    {
+      <span class="t-green">"dependency_name"</span>: <span class="t-green">"requests"</span>,
+      <span class="t-green">"version"</span>: <span class="t-green">"2.31.0"</span>,
+      <span class="t-green">"overall"</span>: <span class="t-yellow">88.4</span>,
+      <span class="t-green">"overall_grade"</span>: <span class="t-green">"A"</span>,
+      <span class="t-green">"security_posture"</span>: {
+        <span class="t-green">"score"</span>: <span class="t-yellow">74.0</span>, <span class="t-green">"confidence"</span>: <span class="t-yellow">0.85</span>,
+        <span class="t-green">"reasoning"</span>: <span class="t-green">"One high CVE in last 6 months despite strong security posture..."</span>
+      },
+      <span class="t-green">"ai_available"</span>: <span class="t-yellow">true</span>,
+      <span class="t-green">"scored_at"</span>: <span class="t-green">"2026-04-06T14:00:00Z"</span>
+    }
+  ],
+  <span class="t-violet">"generated_at"</span>: <span class="t-green">"2026-04-06T14:01:23Z"</span>,
+  <span class="t-violet">"depscore_version"</span>: <span class="t-green">"0.1.0"</span>
+}</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3 id="html-output">HTML Dashboard</h3>
+      <p>Generated when <code>--html</code> is passed. Written to <code>&lt;output-dir&gt;/depscore-report.html</code>.</p>
+      <ul>
+        <li>Self-contained single file — no web server required, works offline</li>
+        <li>Overall SBOM score gauge and grade distribution chart</li>
+        <li>Per-dimension radar chart showing average scores</li>
+        <li>Sortable, filterable dependency table with score bars and grade badges</li>
+        <li>Per-dependency drill-down panel with CVE list, OpenSSF Scorecard checks, and Claude AI reasoning per dimension</li>
+      </ul>
+    </div>
+
+    <!-- Docker -->
+    <div class="doc-section" id="docker-quickstart">
+      <h2>Docker</h2>
+
+      <h3>Build</h3>
+      <div class="code-wrap">
+        <pre class="code-block">docker build -t depscore .</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>Run — JSON output</h3>
+      <div class="code-wrap">
+        <pre class="code-block">docker run --rm \
+  -e GITHUB_TOKEN=$GITHUB_TOKEN \
+  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  -v /path/to/sbom.json:/sbom/sbom.json:ro \
+  -v $(pwd)/report:/output \
+  depscore scan --sbom /sbom/sbom.json --output /output</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>Run — HTML dashboard + rules-only</h3>
+      <div class="code-wrap">
+        <pre class="code-block">docker run --rm \
+  -e GITHUB_TOKEN=$GITHUB_TOKEN \
+  -v /path/to/sbom.json:/sbom/sbom.json:ro \
+  -v $(pwd)/report:/output \
+  depscore scan --sbom /sbom/sbom.json --output /output --html --no-ai</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <p>Mount your SBOM at <code>/sbom/</code> (read-only) and collect output from <code>/output/</code>.</p>
+
+      <h3 id="docker-env">Environment Variables</h3>
+      <table class="doc-table">
+        <thead><tr><th>Variable</th><th>Required</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>GITHUB_TOKEN</td><td><span class="req-badge yes">Required</span></td><td>GitHub personal access token</td></tr>
+          <tr><td>ANTHROPIC_API_KEY</td><td><span class="req-badge no">Optional</span></td><td>Required unless using <code>--no-ai</code></td></tr>
+          <tr><td>LIBRARIES_IO_API_KEY</td><td><span class="req-badge no">Optional</span></td><td>Improves enrichment quality</td></tr>
+          <tr><td>DEPSCORE_AI_ENABLED</td><td><span class="req-badge no">Optional</span></td><td>Default: <code>true</code></td></tr>
+          <tr><td>DEPSCORE_AI_BLEND_WEIGHT</td><td><span class="req-badge no">Optional</span></td><td>Default: <code>0.6</code></td></tr>
+          <tr><td>DEPSCORE_CONCURRENCY_LIMIT</td><td><span class="req-badge no">Optional</span></td><td>Default: <code>10</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FAQ -->
+    <div class="doc-section" id="faq">
+      <h2>FAQ</h2>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Do I need a claude.ai subscription? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">No. claude.ai (Pro/Team/Max) is a separate consumer product from the Anthropic API. depscore uses the Anthropic API, which requires a separate account and credit balance at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Minimum $5 to get started.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Can I use depscore without an Anthropic API key? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">Yes. Pass <code>--no-ai</code> or set <code>DEPSCORE_AI_ENABLED=false</code> to run pure rules-based scoring at zero AI cost. You still need a GitHub token for enrichment.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">What SBOM formats are supported? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">CycloneDX JSON (1.4+) and SPDX JSON (2.3+). Format is auto-detected by default. Pass <code>--format cyclonedx</code> or <code>--format spdx</code> to override.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">How do I generate an SBOM? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">Use <a href="https://github.com/anchore/syft" target="_blank">Syft</a>: <code>syft dir:. -o cyclonedx-json > sbom.json</code> for a directory, or <code>syft &lt;image&gt; -o cyclonedx-json > sbom.json</code> for a container image. Trivy also works: <code>trivy fs --format cyclonedx . > sbom.json</code>.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">What ecosystems does depscore support? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">Python (PyPI), JavaScript (npm), Java/JVM (Maven Central), and .NET (NuGet) have dedicated registry enrichers. Any dependency with a GitHub repository URL is enriched via GitHub, OSV, and OpenSSF Scorecard regardless of ecosystem.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">Is the HTML report self-contained? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">Yes. The HTML file embeds all report data as an inline JSON blob and loads Chart.js from a CDN. Once the page has been opened in a browser (and CDN assets cached), it works fully offline. No web server is needed.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">What does the AI reasoning look like? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">Claude receives all enriched signals for a dependency and returns a score (0–100) plus 1–3 sentences of written reasoning per dimension. For example: <em>"One high-severity CVE in the last 6 months warrants attention despite security policy presence and branch protection; missing signed commits."</em> This reasoning appears in the HTML drill-down panel and the JSON output.</div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">How long does a scan take? <span class="faq-arrow">&#8964;</span></button>
+        <div class="faq-a">Depends on SBOM size and API rate limits. Rough estimates: 10 deps ~15–30s · 50 deps ~1–2 min · 100 deps ~2–4 min. Controlled by <code>DEPSCORE_CONCURRENCY_LIMIT</code> (default 10 parallel enrichments). Use <code>--no-ai</code> to skip AI calls and cut time roughly in half.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="https://github.com/jaredmladner/depscore" target="_blank">GitHub</a>
+    <a href="https://github.com/jaredmladner/depscore/blob/main/LICENSE" target="_blank">Apache 2.0 License</a>
+    <a href="https://anthropic.com" target="_blank">Made with Claude</a>
+  </div>
+  <div class="footer-copy">© 2026 Jared Ladner</div>
+</footer>
+
+<script>
+  // Copy buttons
+  function copyCode(btn) {
+    const pre = btn.previousElementSibling;
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  }
+
+  // FAQ accordion
+  function toggleFaq(btn) {
+    const answer = btn.nextElementSibling;
+    const isOpen = answer.classList.contains('open');
+    btn.classList.toggle('open', !isOpen);
+    answer.classList.toggle('open', !isOpen);
+  }
+
+  // Sidebar active link via IntersectionObserver
+  const sections = document.querySelectorAll('.doc-section[id]');
+  const links = document.querySelectorAll('.sidebar-link');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+
+  // Sidebar search — highlight matching links
+  document.getElementById('sidebarSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    links.forEach(l => {
+      const match = !q || l.textContent.toLowerCase().includes(q);
+      l.style.display = match ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>
