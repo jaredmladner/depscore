@@ -1,0 +1,32 @@
+name: Release Please
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: python
+          # Reads version from pyproject.toml automatically
+          # Commit messages drive version bumps:
+          #   feat: ...       → minor bump (0.1.0 → 0.2.0)
+          #   fix: ...        → patch bump (0.1.0 → 0.1.1)
+          #   feat!: ...      → major bump (0.1.0 → 1.0.0)
+          #   chore/docs/etc  → no version bump
+
+  # When release-please merges a Release PR it pushes a tag,
+  # which triggers release.yml automatically. Nothing else needed here.
