@@ -43,9 +43,7 @@ def _parse_sbom(sbom_path: Path, fmt: Literal["cyclonedx", "spdx", "auto"]):
 _GRADE_ORDER = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 
 
-def _gate_violations(
-    report, fail_on_grade: str
-) -> list:
+def _gate_violations(report, fail_on_grade: str) -> list:
     """Return scored deps whose overall_grade is at or below fail_on_grade."""
     threshold = _GRADE_ORDER[fail_on_grade.upper()]
     return [
@@ -101,11 +99,7 @@ async def _run_scan(
     console.print(
         f"\n[bold]depscore[/bold] v{__version__}  |  [cyan]{sbom_path.name}[/cyan]  "
         f"|  [green]{len(parsed.components)}[/green] components"
-        + (
-            f"  |  [yellow]{len(ignored_deps)} ignored[/yellow]"
-            if ignored_deps
-            else ""
-        )
+        + (f"  |  [yellow]{len(ignored_deps)} ignored[/yellow]" if ignored_deps else "")
         + "\n"
     )
 
@@ -322,8 +316,14 @@ def scan(
     try:
         exit_code = asyncio.run(
             _run_scan(
-                sbom, fmt, output_dir, emit_html, no_ai,
-                ignore_file, fail_on_grade, gate_exit_code,
+                sbom,
+                fmt,
+                output_dir,
+                emit_html,
+                no_ai,
+                ignore_file,
+                fail_on_grade,
+                gate_exit_code,
             )
         )
         sys.exit(exit_code)

@@ -185,10 +185,9 @@ class GitHubEnricher(BaseEnricher):
             # Collect unique author emails from recent commits
             emails: list[str] = []
             for commit in commits_data:
-                email = (
-                    (commit.get("commit") or {})
-                    .get("author") or {}
-                ).get("email") or ""
+                email = ((commit.get("commit") or {}).get("author") or {}).get(
+                    "email"
+                ) or ""
                 if email and "@" in email:
                     emails.append(email.lower())
 

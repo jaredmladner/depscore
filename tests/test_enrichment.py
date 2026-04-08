@@ -217,8 +217,8 @@ async def test_osv_enricher_cve_fix_resolution():
             result = await enricher.enrich(component, client)
 
     assert result.vuln_count_total == 2
-    assert result.pct_vulns_fixed == 1.0       # both fixed
-    assert result.avg_days_to_fix == 15.0      # (10 + 20) / 2
+    assert result.pct_vulns_fixed == 1.0  # both fixed
+    assert result.avg_days_to_fix == 15.0  # (10 + 20) / 2
     assert result.unpatched_critical_count == 0
     assert result.error is None
 

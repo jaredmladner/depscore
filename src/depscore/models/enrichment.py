@@ -18,8 +18,10 @@ class GitHubData(BaseModel):
     org_name: str | None = None
     default_branch: str | None = None
     # Adversarial contributor signals (DoD/federal supply chain risk)
-    adversarial_contributor_pct: float | None = None   # fraction of recent commits from risky domains
-    adversarial_domains_found: list[str] = []          # e.g. ["@huawei.com", ".cn"]
+    adversarial_contributor_pct: float | None = (
+        None  # fraction of recent commits from risky domains
+    )
+    adversarial_domains_found: list[str] = []  # e.g. ["@huawei.com", ".cn"]
     error: str | None = None
 
 
@@ -40,9 +42,13 @@ class OSVData(BaseModel):
     most_recent_vuln_days_ago: int | None = None
     cve_ids: list[str] = []
     # CVE resolution signals
-    pct_vulns_fixed: float | None = None       # 0.0-1.0 fraction of CVEs with a fix available
-    avg_days_to_fix: float | None = None       # avg days from published → modified (fix proxy)
-    unpatched_critical_count: int = 0          # critical CVEs with no fix event in OSV
+    pct_vulns_fixed: float | None = (
+        None  # 0.0-1.0 fraction of CVEs with a fix available
+    )
+    avg_days_to_fix: float | None = (
+        None  # avg days from published → modified (fix proxy)
+    )
+    unpatched_critical_count: int = 0  # critical CVEs with no fix event in OSV
     error: str | None = None
 
 

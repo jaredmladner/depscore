@@ -283,12 +283,12 @@ def _adversarial_contributor_score(pct: float | None) -> float | None:
     if pct == 0.0:
         return 100.0
     if pct <= 0.05:
-        return 60.0   # small presence — flag but don't catastrophise
+        return 60.0  # small presence — flag but don't catastrophise
     if pct <= 0.15:
         return 35.0
     if pct <= 0.30:
         return 15.0
-    return 5.0        # majority of recent commits from adversarial domains
+    return 5.0  # majority of recent commits from adversarial domains
 
 
 def _scorecard_community_score(checks: dict | None) -> float | None:
@@ -401,7 +401,7 @@ def score_security_posture(dep: EnrichedDependency) -> tuple[float, float, dict]
     score, confidence = _weighted_avg(
         [
             (vuln, 4.0),
-            (unpatched_crit, 3.0),   # unpatched criticals are an independent hard signal
+            (unpatched_crit, 3.0),  # unpatched criticals are an independent hard signal
             (fix_rate, 2.0),
             (resolution_speed, 1.5),
             (sec_md, 1.5),

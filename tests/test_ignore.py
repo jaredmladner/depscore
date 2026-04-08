@@ -1,9 +1,6 @@
 """Tests for .depscoreignore parsing and component filtering."""
 
 import textwrap
-from pathlib import Path
-
-import pytest
 
 from depscore.ignore import filter_components, is_ignored, load_ignore_patterns
 from depscore.models.sbom import SBOMComponent
@@ -163,7 +160,9 @@ def test_filter_ignored_dict_has_expected_keys():
 
 def test_filter_multiple_patterns_first_match_wins():
     comp = _comp("internal-db", purl="pkg:pypi/internal-db@0.1.0")
-    active, ignored = filter_components([comp], ["internal-*", "pkg:pypi/internal-db@0.1.0"])
+    active, ignored = filter_components(
+        [comp], ["internal-*", "pkg:pypi/internal-db@0.1.0"]
+    )
     assert len(ignored) == 1
     # matched by first applicable pattern
     assert ignored[0]["matched_pattern"] == "internal-*"

@@ -161,12 +161,12 @@ def test_community_solo():
 @pytest.mark.parametrize(
     "pct_fixed,min_score,max_score",
     [
-        (1.0, 90, 100),    # all fixed → high score
-        (0.95, 90, 100),   # at threshold
+        (1.0, 90, 100),  # all fixed → high score
+        (0.95, 90, 100),  # at threshold
         (0.80, 75, 85),
         (0.60, 55, 65),
         (0.40, 35, 45),
-        (0.20, 10, 20),    # low fix rate → low score
+        (0.20, 10, 20),  # low fix rate → low score
         (None, None, None),
     ],
 )
@@ -181,13 +181,13 @@ def test_cve_fix_rate_score(pct_fixed, min_score, max_score):
 @pytest.mark.parametrize(
     "avg_days,min_score,max_score",
     [
-        (3, 95, 100),    # fixed in < 1 week → excellent
-        (7, 95, 100),    # exactly 7 days
+        (3, 95, 100),  # fixed in < 1 week → excellent
+        (7, 95, 100),  # exactly 7 days
         (15, 80, 90),
         (60, 60, 70),
         (120, 35, 45),
         (200, 15, 25),
-        (400, 0, 10),   # > 365 days → 5.0
+        (400, 0, 10),  # > 365 days → 5.0
         (None, None, None),
     ],
 )
@@ -265,11 +265,11 @@ def test_security_unpatched_critical_tanks_score():
 @pytest.mark.parametrize(
     "pct,max_score",
     [
-        (0.0, 100),    # zero adversarial → neutral
-        (0.03, 65),    # small presence → flagged
-        (0.10, 40),    # moderate
-        (0.20, 20),    # high
-        (0.35, 10),    # majority
+        (0.0, 100),  # zero adversarial → neutral
+        (0.03, 65),  # small presence → flagged
+        (0.10, 40),  # moderate
+        (0.20, 20),  # high
+        (0.35, 10),  # majority
         (None, None),
     ],
 )
