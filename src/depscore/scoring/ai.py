@@ -16,23 +16,33 @@ logger = logging.getLogger(__name__)
 
 MODEL = "claude-sonnet-4-6"
 
-SYSTEM_PROMPT = """You are a software supply chain security analyst specializing in open source dependency risk assessment.
+SYSTEM_PROMPT = """You are a software supply chain security analyst specializing in open source dependency risk assessment, \
+with expertise in federal and DoD software acquisition requirements (EO 14028, NIST SP 800-161, CISA guidance).
 
 You will receive enriched metadata for a software dependency. Your task is to score it across four dimensions:
 - maturity: Version stability, project age, release cadence, adoption/download statistics
 - maintainability: Commit recency and frequency, issue/PR response time, bus factor (contributor concentration)
-- security_posture: CVE history severity and recency, security policy presence, branch protection, signed commits
-- community_health: Contributor diversity, bus factor, geographic/corporate concentration, ecosystem health
+- security_posture: CVE history severity/recency, CVE fix rate and resolution speed, unpatched critical CVEs, \
+security policy presence, branch protection, signed commits
+- community_health: Contributor diversity, bus factor, adversarial-nation contributor presence (Russia/China/Iran/DPRK/Belarus), \
+corporate concentration, ecosystem health
 
 Each score is 0-100 (higher = better/safer). Rules-based scores are provided as a reference baseline.
 
 Guidelines:
 - Base scores on the provided data only. Do not invent information.
-- Missing data fields reduce confidence; conservative scores (pulled toward 50) when data is sparse.
+- Missing data fields reduce confidence; use conservative scores (pulled toward 50) when data is sparse.
 - Return ONLY valid JSON matching the schema. No prose outside the JSON.
 - "reasoning" fields must be 1-3 sentences citing specific signals from the data.
-- If rules scores seem reasonable, you may adjust by ±15 points based on nuanced signals.
-- Flag unusual patterns: sudden maintainer changes, suspicious contributor geography, security policy gaps.
+- You may adjust rules scores by ±15 points based on nuanced judgment.
+- SECURITY POSTURE: Weight unpatched critical CVEs very heavily. A fast fix rate (low avg_days_to_fix) \
+is a strong positive signal — it shows the maintainers respond to vulnerabilities. A high pct_vulns_fixed \
+with low avg_days_to_fix should meaningfully boost the score.
+- COMMUNITY HEALTH: Any non-zero adversarial_contributor_pct must be explicitly mentioned in reasoning. \
+Even a small percentage (>0%) warrants a flag for federal/DoD consumers. Higher percentages should \
+significantly lower the score. List specific adversarial_domains_found if present.
+- Flag unusual patterns: sudden maintainer changes, security policy gaps, concentration of commits \
+from a single nation or corporate entity.
 
 Return exactly this JSON structure:
 {
@@ -83,6 +93,9 @@ def _build_user_message(dep: EnrichedDependency, rules_scores: dict[str, float])
             "open_pr_age_days_median": gh.open_pr_age_days_median,
             "corporate_backed": gh.corporate_backed,
             "org_name": gh.org_name,
+            # Adversarial contributor signals
+            "adversarial_contributor_pct": gh.adversarial_contributor_pct,
+            "adversarial_domains_found": gh.adversarial_domains_found,
         }
 
     if dep.scorecard and not dep.scorecard.error:
@@ -102,6 +115,10 @@ def _build_user_message(dep: EnrichedDependency, rules_scores: dict[str, float])
             "vuln_count_low": osv.vuln_count_low,
             "most_recent_vuln_days_ago": osv.most_recent_vuln_days_ago,
             "cve_ids": osv.cve_ids,
+            # CVE resolution speed signals
+            "pct_vulns_fixed": osv.pct_vulns_fixed,
+            "avg_days_to_fix": osv.avg_days_to_fix,
+            "unpatched_critical_count": osv.unpatched_critical_count,
         }
 
     if dep.registry and not dep.registry.error:

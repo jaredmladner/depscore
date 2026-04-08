@@ -117,7 +117,11 @@ def test_security_no_vulns():
 
 def test_security_critical_vuln():
     dep = _make_dep(
-        osv=OSVData(vuln_count_total=2, vuln_count_critical=2),
+        osv=OSVData(
+            vuln_count_total=2,
+            vuln_count_critical=2,
+            unpatched_critical_count=2,
+        ),
     )
     score, _, _ = rules_mod.score_security_posture(dep)
     assert score < 30
@@ -125,10 +129,10 @@ def test_security_critical_vuln():
 
 def test_security_high_vulns():
     dep = _make_dep(
-        osv=OSVData(vuln_count_total=3, vuln_count_high=3),
+        osv=OSVData(vuln_count_total=3, vuln_count_high=3, unpatched_critical_count=0),
     )
     score, _, _ = rules_mod.score_security_posture(dep)
-    assert score < 50
+    assert score < 70
 
 
 # ─── Community Health ─────────────────────────────────────────────────────────
@@ -149,6 +153,189 @@ def test_community_solo():
     )
     score, _, _ = rules_mod.score_community_health(dep)
     assert score < 20
+
+
+# ─── CVE Resolution Speed (unit) ─────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "pct_fixed,min_score,max_score",
+    [
+        (1.0, 90, 100),  # all fixed → high score
+        (0.95, 90, 100),  # at threshold
+        (0.80, 75, 85),
+        (0.60, 55, 65),
+        (0.40, 35, 45),
+        (0.20, 10, 20),  # low fix rate → low score
+        (None, None, None),
+    ],
+)
+def test_cve_fix_rate_score(pct_fixed, min_score, max_score):
+    result = rules_mod._cve_fix_rate_score(pct_fixed)
+    if pct_fixed is None:
+        assert result is None
+    else:
+        assert min_score <= result <= max_score
+
+
+@pytest.mark.parametrize(
+    "avg_days,min_score,max_score",
+    [
+        (3, 95, 100),  # fixed in < 1 week → excellent
+        (7, 95, 100),  # exactly 7 days
+        (15, 80, 90),
+        (60, 60, 70),
+        (120, 35, 45),
+        (200, 15, 25),
+        (400, 0, 10),  # > 365 days → 5.0
+        (None, None, None),
+    ],
+)
+def test_cve_resolution_speed_score(avg_days, min_score, max_score):
+    result = rules_mod._cve_resolution_speed_score(avg_days)
+    if avg_days is None:
+        assert result is None
+    else:
+        assert min_score <= result <= max_score
+
+
+@pytest.mark.parametrize(
+    "count,expected",
+    [
+        (0, 100.0),
+        (1, 20.0),
+        (2, 10.0),
+        (3, 0.0),
+        (10, 0.0),  # capped at 0
+    ],
+)
+def test_unpatched_critical_score(count, expected):
+    assert rules_mod._unpatched_critical_score(count) == expected
+
+
+# ─── CVE Resolution Speed (integration) ──────────────────────────────────────
+
+
+def test_security_fast_cve_fix_rate_boosts_score():
+    """High fix rate + fast resolution should push security score above baseline."""
+    dep_good = _make_dep(
+        osv=OSVData(
+            vuln_count_total=5,
+            vuln_count_high=5,
+            pct_vulns_fixed=1.0,
+            avg_days_to_fix=5.0,
+            unpatched_critical_count=0,
+        ),
+        github=GitHubData(has_security_md=True, branch_protection_enabled=True),
+    )
+    dep_bad = _make_dep(
+        osv=OSVData(
+            vuln_count_total=5,
+            vuln_count_high=5,
+            pct_vulns_fixed=0.20,
+            avg_days_to_fix=400.0,
+            unpatched_critical_count=0,
+        ),
+    )
+    score_good, _, _ = rules_mod.score_security_posture(dep_good)
+    score_bad, _, _ = rules_mod.score_security_posture(dep_bad)
+    assert score_good > score_bad
+
+
+def test_security_unpatched_critical_tanks_score():
+    """Unpatched critical CVEs should significantly lower the security score."""
+    dep = _make_dep(
+        osv=OSVData(
+            vuln_count_total=2,
+            vuln_count_critical=2,
+            pct_vulns_fixed=0.0,
+            avg_days_to_fix=None,
+            unpatched_critical_count=2,
+        ),
+        github=GitHubData(has_security_md=True, branch_protection_enabled=True),
+    )
+    score, _, signals = rules_mod.score_security_posture(dep)
+    assert score < 35
+    assert signals["unpatched_critical_count"] == 2
+
+
+# ─── Adversarial Contributors (unit) ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "pct,max_score",
+    [
+        (0.0, 100),  # zero adversarial → neutral
+        (0.03, 65),  # small presence → flagged
+        (0.10, 40),  # moderate
+        (0.20, 20),  # high
+        (0.35, 10),  # majority
+        (None, None),
+    ],
+)
+def test_adversarial_contributor_score(pct, max_score):
+    result = rules_mod._adversarial_contributor_score(pct)
+    if pct is None:
+        assert result is None
+    elif pct == 0.0:
+        assert result == 100.0
+    else:
+        assert result <= max_score
+
+
+# ─── Adversarial Contributors (integration) ──────────────────────────────────
+
+
+def test_community_adversarial_pct_lowers_score():
+    """A project with adversarial contributors should score lower than one without."""
+    dep_clean = _make_dep(
+        github=GitHubData(
+            total_contributors=50,
+            top_contributor_percent=0.10,
+            adversarial_contributor_pct=0.0,
+            adversarial_domains_found=[],
+        ),
+    )
+    dep_risky = _make_dep(
+        github=GitHubData(
+            total_contributors=50,
+            top_contributor_percent=0.10,
+            adversarial_contributor_pct=0.20,
+            adversarial_domains_found=[".cn"],
+        ),
+    )
+    score_clean, _, _ = rules_mod.score_community_health(dep_clean)
+    score_risky, _, _ = rules_mod.score_community_health(dep_risky)
+    assert score_clean > score_risky
+
+
+def test_community_adversarial_zero_pct_no_penalty():
+    """Explicitly zero adversarial pct should not penalise community score."""
+    dep = _make_dep(
+        github=GitHubData(
+            total_contributors=80,
+            top_contributor_percent=0.08,
+            adversarial_contributor_pct=0.0,
+            adversarial_domains_found=[],
+        ),
+        libraries_io=LibrariesIOData(sourcerank=22),
+    )
+    score, _, signals = rules_mod.score_community_health(dep)
+    assert score >= 75
+    assert signals["adversarial_contributor_pct"] == 0.0
+
+
+def test_community_adversarial_signals_present_in_signals_dict():
+    dep = _make_dep(
+        github=GitHubData(
+            adversarial_contributor_pct=0.12,
+            adversarial_domains_found=[".ru", ".cn"],
+        ),
+    )
+    _, _, signals = rules_mod.score_community_health(dep)
+    assert signals["adversarial_contributor_pct"] == 0.12
+    assert ".ru" in signals["adversarial_domains_found"]
+    assert ".cn" in signals["adversarial_domains_found"]
 
 
 # ─── Grade thresholds ─────────────────────────────────────────────────────────

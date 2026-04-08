@@ -39,5 +39,6 @@ class SBOMScoreReport(BaseModel):
     grade_distribution: dict[str, int]
     dimension_averages: dict[str, float]
     scores: list[DependencyScores]
+    ignored_dependencies: list[dict] = []
     generated_at: datetime
     depscore_version: str

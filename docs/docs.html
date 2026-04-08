@@ -181,7 +181,7 @@
     <span class="nav-wordmark">depscore</span>
   </a>
   <div class="nav-right">
-    <span class="nav-version">v0.1.0</span>
+    <span class="nav-version">v0.1.0</span><!-- x-release-please-version -->
     <a href="index.html">Home</a>
     <a href="https://github.com/jaredmladner/depscore" target="_blank" rel="noopener">GitHub ↗</a>
   </div>
@@ -220,6 +220,12 @@
       <a class="sidebar-link" href="#hybrid-scoring">Hybrid Scoring</a>
       <a class="sidebar-link" href="#grade-thresholds">Grade Thresholds</a>
       <a class="sidebar-link" href="#api-cost">API Cost Estimates</a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">CI/CD Integration</div>
+      <a class="sidebar-link" href="#gate-threshold">Gate Threshold</a>
+      <a class="sidebar-link" href="#ignore-file">Ignore File</a>
     </div>
 
     <div class="sidebar-group">
@@ -325,6 +331,9 @@ pip install .</pre>
           <tr><td>--output PATH</td><td>Path</td><td>./depscore-output</td><td>Directory to write report files into.</td></tr>
           <tr><td>--html</td><td>Flag</td><td>false</td><td>Also generate an interactive HTML dashboard alongside the JSON report.</td></tr>
           <tr><td>--no-ai</td><td>Flag</td><td>false</td><td>Skip AI scoring. Uses rules-based scoring only. No Anthropic key required.</td></tr>
+          <tr><td>--ignore-file PATH</td><td>Path</td><td>auto</td><td>Path to a <code>.depscoreignore</code> file. Auto-discovered next to the SBOM or in CWD if omitted.</td></tr>
+          <tr><td>--fail-on-grade</td><td>Choice</td><td>—</td><td>Exit with non-zero if any dependency scores at or below this grade (<code>A</code> <code>B</code> <code>C</code> <code>D</code> <code>F</code>).</td></tr>
+          <tr><td>--exit-code N</td><td>Integer</td><td>1</td><td>Exit code to use when <code>--fail-on-grade</code> gate fires.</td></tr>
           <tr><td>--version</td><td>Flag</td><td>—</td><td>Print version and exit.</td></tr>
           <tr><td>--help</td><td>Flag</td><td>—</td><td>Show help message and exit.</td></tr>
         </tbody>
@@ -399,12 +408,53 @@ depscore scan --sbom sbom.json --html</pre>
       <table class="doc-table">
         <thead><tr><th>Dimension</th><th>Weight</th><th>What it measures</th><th>Data sources</th></tr></thead>
         <tbody>
-          <tr><td>security_posture</td><td>35%</td><td>CVE history &amp; severity, SECURITY.md, branch protection, signed commits, OpenSSF Scorecard</td><td>OSV, OpenSSF, GitHub</td></tr>
+          <tr><td>security_posture</td><td>35%</td><td>CVE history &amp; severity, <strong>CVE resolution speed</strong>, unpatched critical CVEs, SECURITY.md, branch protection, signed commits, OpenSSF Scorecard</td><td>OSV, OpenSSF, GitHub</td></tr>
           <tr><td>maintainability</td><td>30%</td><td>Commit recency &amp; frequency, PR response time, bus factor</td><td>GitHub API</td></tr>
           <tr><td>maturity</td><td>20%</td><td>Version stability, project age, release cadence, download adoption</td><td>PyPI, npm, Maven, NuGet, Libraries.io</td></tr>
-          <tr><td>community_health</td><td>15%</td><td>Contributor diversity, geographic/corporate concentration, SourceRank</td><td>GitHub, Libraries.io</td></tr>
+          <tr><td>community_health</td><td>15%</td><td>Contributor diversity, <strong>adversarial-nation contributor detection</strong>, corporate concentration, SourceRank</td><td>GitHub, Libraries.io</td></tr>
         </tbody>
       </table>
+
+      <h3>Security Posture — CVE Resolution Speed</h3>
+      <p>Beyond counting CVEs, depscore measures <strong>how quickly maintainers fix them</strong>. Three signals feed into the security posture score:</p>
+      <ul>
+        <li><strong>Fix rate</strong> (<code>pct_vulns_fixed</code>) — fraction of historical CVEs that have a fix event in the OSV record. A project that fixes 95%+ of its CVEs scores near 95; one that fixes fewer than 40% scores below 20.</li>
+        <li><strong>Resolution speed</strong> (<code>avg_days_to_fix</code>) — average days from CVE <em>published</em> to <em>modified</em> (OSV records are updated when a fix is confirmed). Fixes in under 7 days score 100; over 365 days scores 5.</li>
+        <li><strong>Unpatched critical count</strong> (<code>unpatched_critical_count</code>) — critical CVEs (CVSS ≥ 9.0) with no fix event. Each unpatched critical is a severe signal: 0 unpatched = 100, 1 unpatched = 20, 2+ unpatched = 0–10. This signal carries a weight of 3× in the rules layer.</li>
+      </ul>
+      <div class="callout info">
+        💡 <strong>Tip:</strong> A project with many CVEs but a 100% fix rate and &lt;7-day average resolution time may score <em>higher</em> on security posture than a project with fewer CVEs and unpatched criticals. Speed of response is a strong positive signal.
+      </div>
+
+      <h3>Community Health — Adversarial Nation Contributor Detection</h3>
+      <p>For <strong>DoD and federal software consumers</strong>, depscore detects commit authors whose email domains originate from nations designated as foreign adversaries under US law (EO 13873, NDAA 2019/2023).</p>
+      <p>The analysis inspects the last 90 days of commits (up to 100) from the GitHub API, extracts author email domains, and computes <code>adversarial_contributor_pct</code> — the fraction of commits from flagged domains.</p>
+      <table class="doc-table">
+        <thead><tr><th>Domain pattern</th><th>Nation / entity</th><th>Basis</th></tr></thead>
+        <tbody>
+          <tr><td><code>.ru</code></td><td>Russia</td><td>EO 13873, NDAA</td></tr>
+          <tr><td><code>.cn</code>, <code>.com.cn</code></td><td>China</td><td>EO 13873, NDAA</td></tr>
+          <tr><td><code>.ir</code></td><td>Iran</td><td>NDAA 2019/2023</td></tr>
+          <tr><td><code>.kp</code></td><td>North Korea</td><td>NDAA</td></tr>
+          <tr><td><code>.by</code></td><td>Belarus</td><td>NDAA designation</td></tr>
+          <tr><td><code>huawei.com</code>, <code>hisilicon.com</code></td><td>China (state-linked)</td><td>FCC Covered List</td></tr>
+        </tbody>
+      </table>
+      <p>The scoring penalty is graduated:</p>
+      <table class="doc-table">
+        <thead><tr><th>adversarial_contributor_pct</th><th>Score</th></tr></thead>
+        <tbody>
+          <tr><td>0%</td><td>100 (no penalty)</td></tr>
+          <tr><td>0.1% – 5%</td><td>60 (flag, do not catastrophise)</td></tr>
+          <tr><td>5% – 15%</td><td>35</td></tr>
+          <tr><td>15% – 30%</td><td>15</td></tr>
+          <tr><td>&gt; 30%</td><td>5</td></tr>
+        </tbody>
+      </table>
+      <p>This signal carries a <strong>weight of 3×</strong> in the community health rules layer, and any non-zero percentage is explicitly flagged in the Claude AI reasoning with the specific domains found. Results appear in both JSON output (<code>adversarial_contributor_pct</code>, <code>adversarial_domains_found</code>) and the HTML dashboard drill-down panel.</p>
+      <div class="callout warning">
+        ⚠️ <strong>Note:</strong> Email domain analysis is a heuristic, not a definitive attribution. A contributor may use a personal <code>.cn</code> domain without being state-affiliated. The signal is intended to surface dependencies that warrant further review for federal/DoD acquisition — it is not a definitive determination of malicious intent.
+      </div>
 
       <h3 id="hybrid-scoring">Hybrid Scoring (Rules + AI)</h3>
       <p>depscore blends two scoring layers for each dependency:</p>
@@ -443,6 +493,108 @@ final_score = (rules_score × 0.40) + (ai_score × 0.60)</pre>
         </tbody>
       </table>
       <div class="callout info">💡 Use <code>--no-ai</code> for zero AI cost. Rules-based scoring is free and deterministic, just less nuanced.</div>
+    </div>
+
+    <!-- CI/CD Integration -->
+    <div class="doc-section" id="gate-threshold">
+      <h2>CI/CD Integration</h2>
+
+      <h3>Gate Threshold (<code>--fail-on-grade</code>)</h3>
+      <p>depscore can act as a pipeline quality gate — similar to <code>trivy --exit-code</code> — failing the build when any dependency falls below an acceptable grade.</p>
+
+      <table class="doc-table">
+        <thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>--fail-on-grade</code></td><td>Choice</td><td>—</td><td>Fail if any dependency scores <em>at or below</em> this grade. Choices: <code>A B C D F</code>.</td></tr>
+          <tr><td><code>--exit-code</code></td><td>Integer (1–255)</td><td>1</td><td>Exit code emitted when the gate fires. Use a distinct code (e.g. <code>2</code>) to distinguish gate failures from scan errors in CI.</td></tr>
+        </tbody>
+      </table>
+
+      <p>When the gate fires, depscore prints a table of all violating dependencies and exits with the configured code. Reports are still written before exiting.</p>
+
+      <h3>Examples</h3>
+      <div class="code-wrap">
+        <pre class="code-block"><span class="t-muted"># Fail the build if any dep scores F</span>
+depscore scan --sbom sbom.json --fail-on-grade F
+
+<span class="t-muted"># Fail on D or F; use exit code 2 to distinguish from scan errors</span>
+depscore scan --sbom sbom.json --fail-on-grade D --exit-code 2
+
+<span class="t-muted"># Rules-only scan with gate (no Anthropic key required)</span>
+depscore scan --sbom sbom.json --no-ai --fail-on-grade F --exit-code 2</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>GitHub Actions Example</h3>
+      <div class="code-wrap">
+        <pre class="code-block">- name: Generate SBOM
+  run: syft dir:. -o cyclonedx-json > sbom.json
+
+- name: Score dependencies
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  run: |
+    depscore scan \
+      --sbom sbom.json \
+      --html \
+      --fail-on-grade F \
+      --exit-code 2
+
+- name: Upload depscore report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: depscore-report
+    path: depscore-output/</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <div class="callout info">
+        💡 Use <code>if: always()</code> on the upload step so reports are preserved even when the gate fails.
+      </div>
+
+      <h3 id="ignore-file">Ignore File (<code>.depscoreignore</code>)</h3>
+      <p>Create a <code>.depscoreignore</code> file to exclude known-safe, private, or internal dependencies from enrichment and scoring. Ignored dependencies are <strong>skipped entirely</strong> (saving API calls) and listed in the JSON report under <code>ignored_dependencies</code>.</p>
+
+      <p><strong>Discovery order:</strong> explicit <code>--ignore-file PATH</code> → <code>.depscoreignore</code> next to the SBOM → <code>.depscoreignore</code> in the current working directory.</p>
+
+      <h3>Pattern Syntax</h3>
+      <table class="doc-table">
+        <thead><tr><th>Pattern</th><th>Matches</th></tr></thead>
+        <tbody>
+          <tr><td><code>requests</code></td><td>Exact package name</td></tr>
+          <tr><td><code>internal-*</code></td><td>Name glob — any package starting with <code>internal-</code></td></tr>
+          <tr><td><code>com.mycompany.*</code></td><td>Name glob — all packages in a Maven group</td></tr>
+          <tr><td><code>pkg:maven/com.mycompany/</code></td><td>PURL prefix — all packages in a Maven group (trailing <code>/</code> required)</td></tr>
+          <tr><td><code>pkg:pypi/private-tool@1.0.0</code></td><td>Exact PURL including version</td></tr>
+          <tr><td><code>pkg:pypi/private-tool@*</code></td><td>PURL glob — all versions of a package</td></tr>
+          <tr><td><code># comment</code></td><td>Ignored — anything after <code>#</code> is a comment</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Example <code>.depscoreignore</code></h3>
+      <div class="code-wrap">
+        <pre class="code-block"># Internal / private packages — not in public registries
+internal-*
+com.mycompany.*
+
+# Specific version we've manually reviewed
+pkg:pypi/legacy-tool@0.9.1
+
+# All packages from our private Maven group
+pkg:maven/com.mycompany/
+
+# Known-safe vendored dependency
+vendor-shim</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
+
+      <h3>Using a Custom Ignore File</h3>
+      <div class="code-wrap">
+        <pre class="code-block">depscore scan --sbom sbom.json --ignore-file ./ci/depscore.ignore --fail-on-grade F</pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>
     </div>
 
     <!-- Output Formats -->
