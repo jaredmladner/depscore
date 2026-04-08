@@ -204,6 +204,50 @@ def _scorecard_security_score(checks: dict | None) -> float | None:
     return round(sum(vals) / len(vals), 2)
 
 
+# ─── CVE Resolution Speed ────────────────────────────────────────────────────
+
+
+def _cve_fix_rate_score(pct_fixed: float | None) -> float | None:
+    """Score based on what fraction of historical CVEs have a fix available."""
+    if pct_fixed is None:
+        return None
+    if pct_fixed >= 0.95:
+        return 95.0
+    if pct_fixed >= 0.80:
+        return 80.0
+    if pct_fixed >= 0.60:
+        return 60.0
+    if pct_fixed >= 0.40:
+        return 40.0
+    return 15.0
+
+
+def _cve_resolution_speed_score(avg_days: float | None) -> float | None:
+    """Score based on average days from CVE disclosure to fix (lower = better)."""
+    if avg_days is None:
+        return None
+    if avg_days <= 7:
+        return 100.0
+    if avg_days <= 30:
+        return 85.0
+    if avg_days <= 90:
+        return 65.0
+    if avg_days <= 180:
+        return 40.0
+    if avg_days <= 365:
+        return 20.0
+    return 5.0
+
+
+def _unpatched_critical_score(count: int) -> float:
+    """Heavy penalty for critical CVEs with no fix available."""
+    if count == 0:
+        return 100.0
+    if count == 1:
+        return 20.0
+    return max(0.0, 20.0 - (count - 1) * 10)
+
+
 # ─── Community Health ─────────────────────────────────────────────────────────
 
 
@@ -226,6 +270,25 @@ def _sourcerank_score(rank: int | None) -> float | None:
         return None
     # Libraries.io SourceRank is typically 0-30
     return min(100.0, (rank / 30) * 100)
+
+
+def _adversarial_contributor_score(pct: float | None) -> float | None:
+    """
+    Penalise based on fraction of recent commits from adversarial-nation domains.
+    Relevant for DoD/federal supply chain risk (EO 13873, NDAA 2019/2023).
+    0 adversarial commits → neutral (100); any presence → graduated penalty.
+    """
+    if pct is None:
+        return None
+    if pct == 0.0:
+        return 100.0
+    if pct <= 0.05:
+        return 60.0   # small presence — flag but don't catastrophise
+    if pct <= 0.15:
+        return 35.0
+    if pct <= 0.30:
+        return 15.0
+    return 5.0        # majority of recent commits from adversarial domains
 
 
 def _scorecard_community_score(checks: dict | None) -> float | None:
@@ -318,8 +381,18 @@ def score_security_posture(dep: EnrichedDependency) -> tuple[float, float, dict]
     signed = _signed_commits_score(gh.signed_commits_required if gh else None)
     sc_sec = _scorecard_security_score(scorecard.checks if scorecard else None)
 
+    # CVE resolution speed signals
+    fix_rate = _cve_fix_rate_score(osv.pct_vulns_fixed if osv else None)
+    resolution_speed = _cve_resolution_speed_score(osv.avg_days_to_fix if osv else None)
+    unpatched_crit = (
+        _unpatched_critical_score(osv.unpatched_critical_count) if osv else None
+    )
+
     signals["vuln_count_critical"] = osv.vuln_count_critical if osv else None
     signals["vuln_count_high"] = osv.vuln_count_high if osv else None
+    signals["pct_vulns_fixed"] = osv.pct_vulns_fixed if osv else None
+    signals["avg_days_to_fix"] = osv.avg_days_to_fix if osv else None
+    signals["unpatched_critical_count"] = osv.unpatched_critical_count if osv else None
     signals["has_security_md"] = gh.has_security_md if gh else None
     signals["branch_protection_enabled"] = gh.branch_protection_enabled if gh else None
     signals["signed_commits_required"] = gh.signed_commits_required if gh else None
@@ -328,6 +401,9 @@ def score_security_posture(dep: EnrichedDependency) -> tuple[float, float, dict]
     score, confidence = _weighted_avg(
         [
             (vuln, 4.0),
+            (unpatched_crit, 3.0),   # unpatched criticals are an independent hard signal
+            (fix_rate, 2.0),
+            (resolution_speed, 1.5),
             (sec_md, 1.5),
             (bp, 1.5),
             (signed, 1.0),
@@ -348,11 +424,20 @@ def score_community_health(dep: EnrichedDependency) -> tuple[float, float, dict]
     sourcerank = _sourcerank_score(lib.sourcerank if lib else None)
     sc_comm = _scorecard_community_score(scorecard.checks if scorecard else None)
 
+    # Adversarial contributor signal (DoD/federal supply chain risk)
+    adversarial = _adversarial_contributor_score(
+        gh.adversarial_contributor_pct if gh else None
+    )
+
     signals["total_contributors"] = gh.total_contributors if gh else None
     signals["top_contributor_percent"] = gh.top_contributor_percent if gh else None
     signals["sourcerank"] = lib.sourcerank if lib else None
     signals["org_name"] = gh.org_name if gh else None
     signals["corporate_backed"] = gh.corporate_backed if gh else None
+    signals["adversarial_contributor_pct"] = (
+        gh.adversarial_contributor_pct if gh else None
+    )
+    signals["adversarial_domains_found"] = gh.adversarial_domains_found if gh else []
 
     score, confidence = _weighted_avg(
         [
@@ -360,6 +445,7 @@ def score_community_health(dep: EnrichedDependency) -> tuple[float, float, dict]
             (bus, 2.0),
             (sourcerank, 1.5),
             (sc_comm, 2.0),
+            (adversarial, 3.0),  # weighted heavily for federal/DoD relevance
         ]
     )
     return score, confidence, signals

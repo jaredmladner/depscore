@@ -23,6 +23,16 @@ _ECOSYSTEM_MAP = {
 _SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
 
 
+def _has_fix(vuln: dict) -> bool:
+    """Return True if any affected range has a 'fixed' event."""
+    for affected in vuln.get("affected", []):
+        for rng in affected.get("ranges", []):
+            for event in rng.get("events", []):
+                if "fixed" in event:
+                    return True
+    return False
+
+
 class OSVEnricher(BaseEnricher):
     async def enrich(
         self, component: SBOMComponent, client: httpx.AsyncClient
@@ -44,6 +54,11 @@ class OSVEnricher(BaseEnricher):
         counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
         cve_ids: list[str] = []
         oldest_modified: datetime | None = None
+
+        # CVE resolution tracking
+        fixed_count = 0
+        days_to_fix_list: list[float] = []
+        unpatched_critical = 0
 
         for vuln in vulns:
             # Collect CVE IDs
@@ -83,9 +98,40 @@ class OSVEnricher(BaseEnricher):
                 except ValueError:
                     pass
 
+            # --- CVE resolution speed ---
+            has_fix = _has_fix(vuln)
+            if has_fix:
+                fixed_count += 1
+                # Use published → modified delta as a proxy for time-to-fix.
+                # OSV records are typically updated when a fix is released/confirmed.
+                published_str = vuln.get("published")
+                modified_str = vuln.get("modified")
+                if published_str and modified_str:
+                    try:
+                        pub_dt = datetime.fromisoformat(
+                            published_str.replace("Z", "+00:00")
+                        )
+                        mod_dt = datetime.fromisoformat(
+                            modified_str.replace("Z", "+00:00")
+                        )
+                        delta_days = (mod_dt - pub_dt).total_seconds() / 86400
+                        if delta_days >= 0:
+                            days_to_fix_list.append(delta_days)
+                    except ValueError:
+                        pass
+            elif severity == "CRITICAL":
+                unpatched_critical += 1
+
         most_recent_days_ago: int | None = None
         if oldest_modified:
             most_recent_days_ago = (datetime.now(timezone.utc) - oldest_modified).days
+
+        pct_fixed = (fixed_count / len(vulns)) if vulns else None
+        avg_days = (
+            round(sum(days_to_fix_list) / len(days_to_fix_list), 1)
+            if days_to_fix_list
+            else None
+        )
 
         return OSVData(
             vuln_count_total=len(vulns),
@@ -95,4 +141,7 @@ class OSVEnricher(BaseEnricher):
             vuln_count_low=counts["LOW"],
             most_recent_vuln_days_ago=most_recent_days_ago,
             cve_ids=list(set(cve_ids)),
+            pct_vulns_fixed=pct_fixed,
+            avg_days_to_fix=avg_days,
+            unpatched_critical_count=unpatched_critical,
         )

@@ -5,6 +5,12 @@
     ".": {
       "release-type": "python",
       "package-name": "depscore",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "docs/docs.html"
+        }
+      ],
       "changelog-sections": [
         { "type": "feat",     "section": "✨ Features" },
         { "type": "fix",      "section": "🐛 Bug Fixes" },

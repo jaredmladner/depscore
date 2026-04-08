@@ -11,6 +11,26 @@ from depscore.models.sbom import SBOMComponent
 
 _GITHUB_URL_RE = re.compile(r"github\.com[/:]([^/]+)/([^/.\s]+)")
 
+# Email domain patterns flagged as adversarial for DoD/federal supply chain risk.
+# These represent nations designated as foreign adversaries under US law (EO 13873,
+# NDAA 2019/2023) or with documented state-sponsored software supply chain attacks.
+_ADVERSARIAL_DOMAINS: list[str] = [
+    # Russia
+    ".ru",
+    # China
+    ".cn",
+    ".com.cn",
+    # Iran
+    ".ir",
+    # North Korea
+    ".kp",
+    # Belarus (designated under NDAA)
+    ".by",
+    # Known adversarial corporate domains
+    "huawei.com",
+    "hisilicon.com",
+]
+
 
 def _extract_owner_repo(component: SBOMComponent) -> tuple[str, str] | None:
     # Try repository_url first
@@ -154,10 +174,36 @@ class GitHubEnricher(BaseEnricher):
         elif isinstance(contributors_data, Exception):
             errors.append(f"contributors: {contributors_data}")
 
-        # Parse commits (last 90 days)
+        # Parse commits (last 90 days) + adversarial contributor analysis
         commits_last_90_days = None
+        adversarial_contributor_pct = None
+        adversarial_domains_found: list[str] = []
+
         if isinstance(commits_data, list):
             commits_last_90_days = len(commits_data)
+
+            # Collect unique author emails from recent commits
+            emails: list[str] = []
+            for commit in commits_data:
+                email = (
+                    (commit.get("commit") or {})
+                    .get("author") or {}
+                ).get("email") or ""
+                if email and "@" in email:
+                    emails.append(email.lower())
+
+            if emails:
+                adversarial_emails = set()
+                matched_domains: set[str] = set()
+                for email in emails:
+                    for domain in _ADVERSARIAL_DOMAINS:
+                        if email.endswith(domain) or f"@{domain.lstrip('.')}" in email:
+                            adversarial_emails.add(email)
+                            matched_domains.add(domain)
+                            break
+                adversarial_contributor_pct = len(adversarial_emails) / len(emails)
+                adversarial_domains_found = sorted(matched_domains)
+
         elif isinstance(commits_data, Exception):
             errors.append(f"commits: {commits_data}")
 
@@ -214,5 +260,7 @@ class GitHubEnricher(BaseEnricher):
             corporate_backed=corporate_backed,
             org_name=org_name,
             default_branch=default_branch,
+            adversarial_contributor_pct=adversarial_contributor_pct,
+            adversarial_domains_found=adversarial_domains_found,
             error="; ".join(errors) if errors else None,
         )
